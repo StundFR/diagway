@@ -394,7 +394,7 @@ class DiagwayProjection:
         destination_layer = self.dockwidget.destination_comboBox_layers.currentLayer()
         outputFile = self.dockwidget.lineEdit_file.text()
 
-        check = ((source_layer != None) and (destination_layer != None) and (outputFile != "") and isLT93(source_layer) and isLT93(destination_layer))
+        check = ((source_layer != destination_layer) and (source_layer != None) and (destination_layer != None) and (outputFile != "") and isLT93(source_layer) and isLT93(destination_layer))
         self.dockwidget.push_next.setEnabled(check)
 
 
@@ -403,7 +403,7 @@ class DiagwayProjection:
         destination_layer = self.dockwidget.destination_comboBox_layers_complete.currentLayer()
         outputFile = self.dockwidget.lineEdit_file_complete.text()
 
-        check = ((source_layer != None) and (destination_layer != None) and (outputFile != "") and isLT93(source_layer) and isLT93(destination_layer))
+        check = ((source_layer != destination_layer) and (source_layer != None) and (destination_layer != None) and (outputFile != "") and isLT93(source_layer) and isLT93(destination_layer))
         self.dockwidget.push_next_complete.setEnabled(check)
 
 
@@ -606,7 +606,10 @@ class DiagwayProjection:
             extract_path = "C:/temp/diagwayProjectionTmpLayer/routeExtract_" + source +".shp"
             dissolve_path = "C:/temp/diagwayProjectionTmpLayer/routeDissolve_" + source +".shp"
 
-            source_layer.setSubsetString(expression)
+            if not source_layer.setSubsetString(expression):
+                self.iface.messageBar().clearWidgets()
+                self.iface.messageBar().pushMessage("Error", "Source field value is incorrect", level=2, duration=4)
+                return 1
 
             #Graduate buffer
             isEmpty = True
@@ -705,6 +708,8 @@ class DiagwayProjection:
         #Clear filter 
         source_layer.setSubsetString("")
         destination_layer.setSubsetString("")
+
+        return 0
 
 
     def run(self):
