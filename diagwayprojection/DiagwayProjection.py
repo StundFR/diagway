@@ -525,7 +525,8 @@ class DiagwayProjection:
         else:
             destination_text_new = destination_text_old + ";" + destination_fields"""
 
-        self.dockwidget.source_textEdit_fields.setText(source_fields)
+        if (source_fields != ""):
+            self.dockwidget.source_textEdit_fields.setText(source_fields)
         self.dockwidget.destination_textEdit_fields.setText(destination_fields)       
 
 
