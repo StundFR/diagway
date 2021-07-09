@@ -102,7 +102,7 @@ def changeLayerStyleByCSV(source_layer, destination_layer, csv_layer):
             feats.append(f[fields_list[i]])
 
         txt = ""
-        if (type(feats[0]) is str):
+        if ((len(feats) > 0) and (type(feats[0]) is str)):
             for f in feats:
                 txt += "'{}',".format(f.replace(";", "','"))
         else:
@@ -430,7 +430,6 @@ class DiagwayProjection:
 
             self.dockwidget.source_label_field.setText(source_field + " :")
             self.dockwidget.destination_label_field.setText(destination_field + " :")
-            self.dockwidget.radio_w.setChecked(True)
 
             line = "{};{}\n".format(source_field, destination_field)
             with open(filename, "w") as csv:
@@ -450,7 +449,6 @@ class DiagwayProjection:
 
             self.dockwidget.source_label_field.setText(source_label)
             self.dockwidget.destination_label_field.setText(destination_label)
-            self.dockwidget.radio_a.setChecked(True)
 
             source_layer = self.dockwidget.source_comboBox_layers_complete.currentLayer()
             destination_layer = self.dockwidget.destination_comboBox_layers_complete.currentLayer()
@@ -569,7 +567,7 @@ class DiagwayProjection:
 
     def getAutoDestinationFields(self):
         #Create folder in temp
-        dir_path = "C:/temp/routeIdenticateurTmpLayer"
+        dir_path = "C:/temp/diagwayProjectionTmpLayer"
         createDir(dir_path)
 
         #Get data
@@ -583,10 +581,6 @@ class DiagwayProjection:
         destination_label = self.dockwidget.destination_label_field.text()[:-2]
         line = ""
         i = 0
-
-        #Clear filter
-        source_layer.setSubsetString("")
-        destination_layer.setSubsetString("")
 
         #Count number of source
         source_text = self.dockwidget.source_textEdit_fields.toPlainText()
@@ -602,10 +596,15 @@ class DiagwayProjection:
         self.iface.messageBar().pushWidget(progressMessageBar)
 
         for source in source_list:
-            buffer_path = "C:/temp/routeIdenticateurTmpLayer/routeBuffer_" + source + ".shp"
-            extract_path = "C:/temp/routeIdenticateurTmpLayer/routeExtract_" + source +".shp"
-            dissolve_path = "C:/temp/routeIdenticateurTmpLayer/routeDissolve_" + source +".shp"
-            expression = "\"{}\" = {}".format(source_label, source)
+            if (type(source) is str):
+                expression = "\"{}\" = '{}'".format(source_label, source)
+            else:
+                expression = "\"{}\" = {}".format(source_label, source)
+            source = str(source)
+            source = source.replace("/", "")
+            buffer_path = "C:/temp/diagwayProjectionTmpLayer/routeBuffer_" + source + ".shp"
+            extract_path = "C:/temp/diagwayProjectionTmpLayer/routeExtract_" + source +".shp"
+            dissolve_path = "C:/temp/diagwayProjectionTmpLayer/routeDissolve_" + source +".shp"
 
             source_layer.setSubsetString(expression)
 
@@ -649,13 +648,13 @@ class DiagwayProjection:
                 #Rename vector
                 if (isEmpty):
                     k += 1
-                    buffer_path ="C:/temp/routeIdenticateurTmpLayer/routeBuffer_" + source + "_" + str(k) + ".shp"
-                    extract_path = "C:/temp/routeIdenticateurTmpLayer/routeExtract_" + source + "_" + str(k) +".shp"
-                    dissolve_path = "C:/temp/routeIdenticateurTmpLayer/routeDissolve_" + source + "_" + str(k) +".shp"
+                    buffer_path ="C:/temp/diagwayProjectionTmpLayer/routeBuffer_" + source + "_" + str(k) + ".shp"
+                    extract_path = "C:/temp/diagwayProjectionTmpLayer/routeExtract_" + source + "_" + str(k) +".shp"
+                    dissolve_path = "C:/temp/diagwayProjectionTmpLayer/routeDissolve_" + source + "_" + str(k) +".shp"
 
             #Create the line
             for field in destination_fields:
-                line += field + ";"
+                line += str(field) + ";"
 
             #Forward the progress bar
             progress.setValue(i + 1)
@@ -758,6 +757,8 @@ class DiagwayProjection:
                 #Connect buttons
                 self.dockwidget.push_create.clicked.connect(lambda : self.dockwidget.stackedWidget.setCurrentIndex(1))
                 self.dockwidget.push_complete.clicked.connect(lambda : self.dockwidget.stackedWidget.setCurrentIndex(2))
+                self.dockwidget.push_create.clicked.connect(lambda : self.dockwidget.radio_w.setChecked(True))
+                self.dockwidget.push_complete.clicked.connect(lambda : self.dockwidget.radio_a.setChecked(True))
                 self.dockwidget.push_next.clicked.connect(lambda : self.dockwidget.stackedWidget.setCurrentIndex(3))
                 self.dockwidget.push_next_complete.clicked.connect(lambda : self.dockwidget.stackedWidget.setCurrentIndex(3))
                 self.dockwidget.push_cancel_create.clicked.connect(lambda : self.dockwidget.stackedWidget.setCurrentIndex(0))
