@@ -147,9 +147,13 @@ def expressionFromFields(label, line):
     return "\"{}\" in ({})".format(label, line)
 
 
+def findLayerByName(name):
+    return QgsProject.instance().mapLayersByName(name)[0]
+
+
 def removeLayersByName(name):
     project = QgsProject.instance()
-    layers = project.mapLayersByName(name)
+    layers = project.instance().mapLayersByName(name)
     for l in layers:
         project.removeMapLayer(l.id())
 
@@ -163,7 +167,7 @@ def cloneAddLayer(layer, name):
 
 def setVisibilityLayerByName(name, visibility):
     project = QgsProject.instance()
-    layer = project.mapLayersByName(name)[0]
+    layer = findLayerByName(name)
     project.layerTreeRoot().findLayer(layer.id()).setItemVisibilityChecked(visibility)
 
 
@@ -177,8 +181,28 @@ def isLT93(layer):
     return layer.crs().authid() == "EPSG:2154"
 
 
-def findLayerByName(name):
-    return QgsProject.instance().mapLayersByName(name)[0]
+def duplicateLineCSV(csv_path, source_value):
+    i = 0
+    with open(csv_path, "r") as csv:
+        lines = csv.readlines()
+    for line in lines:
+        i += 1
+        if (line.split(";")[0] == str(source_value)):
+            return i
+    i = 0
+    return i
+
+
+def removeLineFile(file_path, nLine):
+    with open(file_path, "r") as file:
+        file_lines = file.readlines()
+    
+    i = 1
+    with open(file_path, "w") as file:
+        for line in file_lines:
+            if (i != nLine):
+                file.write(line)
+            i += 1
 
 
 class DiagwayProjection:
@@ -524,10 +548,15 @@ class DiagwayProjection:
             source_layer = self.dockwidget.source_comboBox_layers.currentLayer()
             destination_layer = self.dockwidget.destination_comboBox_layers.currentLayer()
 
-        text_source = self.dockwidget.source_textEdit_fields.toPlainText()
-        text_destination = self.dockwidget.destination_textEdit_fields.toPlainText()
+        source_text = self.dockwidget.source_textEdit_fields.toPlainText()
+        destination_text = self.dockwidget.destination_textEdit_fields.toPlainText()
 
-        line = "\"{}\";\"{}\"\n".format(text_source, text_destination)
+        duplicateLine = duplicateLineCSV(filename, source_text)
+
+        if (duplicateLine != 0):
+            removeLineFile(filename, duplicateLine)
+
+        line = "{};\"{}\"\n".format(source_text, destination_text)
         with open(filename, "a") as csv:
             csv.write(line)
 
@@ -536,12 +565,11 @@ class DiagwayProjection:
 
         refreshLayerByPath(filename)
 
-        project =  QgsProject.instance()
-        statementSource_layer = project.mapLayersByName("Statement_source")[0]
-        statementDestination_layer = project.mapLayersByName("Statement_destination")[0]
+        statementSource_layer = findLayerByName("Statement_source")
+        statementDestination_layer = findLayerByName("Statement_destination")
 
         name_filename = getNameFromPath(filename)
-        csv_layer = project.mapLayersByName(name_filename)[0]
+        csv_layer = findLayerByName(name_filename)
         changeLayerStyleByCSV(statementSource_layer, statementDestination_layer, csv_layer)
 
         setVisibilityLayers(True, statementSource_layer, statementDestination_layer)
