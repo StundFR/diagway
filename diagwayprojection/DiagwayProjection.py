@@ -182,11 +182,8 @@ def findLayerByName(name):
 
 
 class DiagwayProjection:
-    """QGIS Plugin Implementation."""
-
     def __init__(self, iface):
         """Constructor.
-
         :param iface: An interface instance that will be passed to this class
             which provides the hook by which you can manipulate the QGIS
             application at run time.
@@ -367,6 +364,7 @@ class DiagwayProjection:
         filename, _filter = QFileDialog.getOpenFileName(self.dockwidget, "Select output file ","", '*.csv')
         self.dockwidget.lineEdit_file_complete.setText(filename)
 
+
     #Filled the combo box fields
     def fillFields(self, comboBox):
         comboBox.clear()
@@ -376,9 +374,7 @@ class DiagwayProjection:
             comboBox.addItem(f.name())
 
 
-        #Check if layer have lambert93 projection
-    
-    
+    #Check if layer have lambert93 projection
     def isLayerLambert93(self):
         source_layer = self.dockwidget.source_comboBox_layers.currentLayer()
         destination_layer = self.dockwidget.destination_comboBox_layers.currentLayer()
@@ -495,35 +491,23 @@ class DiagwayProjection:
             source_layer = self.dockwidget.source_comboBox_layers.currentLayer()
             destination_layer = self.dockwidget.destination_comboBox_layers.currentLayer()
 
-        source_label = self.dockwidget.source_label_field.text()[:-2]
-        destination_label = self.dockwidget.destination_label_field.text()[:-2]
-        source_feats = source_layer.selectedFeatures()
-        destination_feats = destination_layer.selectedFeatures()
         source_fields = ""
         destination_fields = ""
 
-        for f in source_feats:
-            source_fields += str(f[source_label]) + ";"
-        for f in destination_feats:
-            destination_fields += str(f[destination_label]) + ";"
+        if (source_layer is not None):
+            source_label = self.dockwidget.source_label_field.text()[:-2]
+            source_feats = source_layer.selectedFeatures()
+            for f in source_feats:
+                source_fields += str(f[source_label]) + ";"
+
+        if (destination_layer is not None):
+            destination_label = self.dockwidget.destination_label_field.text()[:-2]
+            destination_feats = destination_layer.selectedFeatures()
+            for f in destination_feats:
+                destination_fields += str(f[destination_label]) + ";"
+
         source_fields = source_fields[:-1]
         destination_fields = destination_fields[:-1]
-
-        source_text_old = self.dockwidget.source_textEdit_fields.toPlainText()
-        destination_text_old = self.dockwidget.destination_textEdit_fields.toPlainText()
-
-        """if (source_text_old == ""):
-            source_text_new = source_fields
-        elif (source_fields == ""):
-            source_text_new = source_text_old
-        else:
-            source_text_new = source_text_old + ";" + source_fields
-        if (source_text_old == ""):
-            destination_text_new = destination_fields
-        elif (destination_fields == ""):
-            destination_text_new = destination_text_old
-        else:
-            destination_text_new = destination_text_old + ";" + destination_fields"""
 
         if (source_fields != ""):
             self.dockwidget.source_textEdit_fields.setText(source_fields)
@@ -745,8 +729,8 @@ class DiagwayProjection:
                 self.dockwidget.destination_comboBox_layers.layerChanged.connect(self.isLayerLambert93)
 
                 #Hide warning pic
-                #self.dockwidget.source_img_warning.setHidden(True)
-                #self.dockwidget.destination_img_warning.setHidden(True)
+                self.dockwidget.source_img_warning.setHidden(False)
+                self.dockwidget.destination_img_warning.setHidden(False)
 
                 #Display fields of selected layers
                 self.dockwidget.source_comboBox_layers.layerChanged.connect(lambda : self.fillFields(self.dockwidget.source_comboBox_fields))
