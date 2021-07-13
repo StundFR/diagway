@@ -86,30 +86,47 @@ def changeLayerStyleByRules(source_layer, rules):
     source_layer.setRenderer(renderer)
 
 
-def changeLayerStyleByCSV(source_layer, destination_layer, csv_layer):
+def getFieldsFromLayer(layer):
     fields_list = []
-    csv_fields = csv_layer.fields()
-    csv_feats = csv_layer.getFeatures()
-    for f in csv_fields:
+    layer_fields = layer.fields()
+    for f in layer_fields:
         fields_list.append(f.name())
+    return fields_list
+
+
+def typeOfLayerFieldName(field_name, layer):
+    feats = layer.getFeatures()
+    for feat in feats:
+        return type(feat[field_name])
+
+
+def changeLayerStyleByCSV(source_layer, destination_layer, csv_path):
+    csv_layer = QgsVectorLayer(csv_path, "", "ogr")
+    fields_list = getFieldsFromLayer(csv_layer)
+    csv_feats = csv_layer.getFeatures()
 
     layers_list = [source_layer, destination_layer]
     layers_list_length = len(layers_list)
 
     for i in range(layers_list_length):
         feats = []
-        for f in csv_feats:
-            feats.append(f[fields_list[i]])
+        for feat in csv_feats:
+            if (type(feat[fields_list[i]]) is str):
+                split = feat[fields_list[i]].split(";")
+                for elem in split:
+                    feats.append(elem)
+
+        field_type = typeOfLayerFieldName(fields_list[i], layers_list[i])
 
         txt = ""
-        if ((len(feats) > 0) and (type(feats[0]) is str)):
-            for f in feats:
-                txt += "'{}',".format(f.replace(";", "','"))
+        if (field_type is str):
+            for feat in feats:
+                txt += "'{}',".format(feat)
         else:
-            for f in feats:
-                txt += "{},".format(f.replace(";", ","))
+            for feat in feats:
+                txt += "{},".format(feat)
         txt = txt[:-1]
-
+        
         expression = "\"{}\" in ({})".format(fields_list[i], txt)
 
         rules = (
@@ -275,6 +292,28 @@ def getSourceDestFile(self):
         destination_layer = self.dockwidget.destination_comboBox_layers.currentLayer()
     
     return source_layer, destination_layer, csv_path
+
+
+def createLayerStyleByCSV(csv_path):
+    refreshLayerByPath(csv_path)
+
+    statementSource_layer = findLayerByName("Statement_source")
+    statementDestination_layer = findLayerByName("Statement_destination")
+
+    changeLayerStyleByCSV(statementSource_layer, statementDestination_layer, csv_path)
+    setVisibilityLayers(True, statementSource_layer, statementDestination_layer)
+
+    return statementSource_layer, statementDestination_layer
+
+
+def initProgressBar(self, max):
+    progressMessageBar = self.iface.messageBar().createMessage("Running...")
+    progress = QProgressBar()
+    progress.setMaximum(max)
+    progress.setAlignment(Qt.AlignLeft|Qt.AlignVCenter)
+    progressMessageBar.layout().addWidget(progress)
+    self.iface.messageBar().pushWidget(progressMessageBar)
+    return progress
 
 
 class DiagwayProjection:
@@ -515,10 +554,13 @@ class DiagwayProjection:
 
 
     def setupPage3(self):
+        source_layer, destination_layer, csv_path = getSourceDestFile(self)
+        source_layer.setSubsetString("")
+        destination_layer.setSubsetString("")
+
         if (self.dockwidget.radio_w.isChecked()):
             source_field = self.dockwidget.source_comboBox_fields.currentText()
             destination_field = self.dockwidget.destination_comboBox_fields.currentText()
-            csv_path = self.dockwidget.lineEdit_file.text()
 
             self.dockwidget.source_label_field.setText(source_field + " :")
             self.dockwidget.destination_label_field.setText(destination_field + " :")
@@ -526,11 +568,7 @@ class DiagwayProjection:
             line = "{};{}\n".format(source_field, destination_field)
             with open(csv_path, "w") as csv:
                 csv.write(line)
-
-            source_layer = self.dockwidget.source_comboBox_layers.currentLayer()
-            destination_layer = self.dockwidget.destination_comboBox_layers.currentLayer()
         else:
-            csv_path = self.dockwidget.lineEdit_file_complete.text()
             with open(csv_path, "r") as csv:
                 header = csv.readline()
 
@@ -542,9 +580,6 @@ class DiagwayProjection:
             self.dockwidget.source_label_field.setText(source_label)
             self.dockwidget.destination_label_field.setText(destination_label)
 
-            source_layer = self.dockwidget.source_comboBox_layers_complete.currentLayer()
-            destination_layer = self.dockwidget.destination_comboBox_layers_complete.currentLayer()
-
         name = getNameFromPath(csv_path)
         removeLayersByName(name)
         self.iface.addVectorLayer(csv_path, "", "ogr")
@@ -554,10 +589,9 @@ class DiagwayProjection:
 
         sourceStatement_layer = findLayerByName("Statement_source")
         destinationStatement_layer = findLayerByName("Statement_destination")
-        csv_layer = QgsVectorLayer(csv_path, "", "ogr")
 
         setVisibilityLayers(False, source_layer, destination_layer)
-        changeLayerStyleByCSV(sourceStatement_layer, destinationStatement_layer, csv_layer)
+        changeLayerStyleByCSV(sourceStatement_layer, destinationStatement_layer, csv_path)
         zoomLayer(self, sourceStatement_layer)
             
 
@@ -616,18 +650,8 @@ class DiagwayProjection:
         self.dockwidget.source_textEdit_fields.setText("")
         self.dockwidget.destination_textEdit_fields.setText("")
 
-        refreshLayerByPath(csv_path)
-
-        statementSource_layer = findLayerByName("Statement_source")
-        statementDestination_layer = findLayerByName("Statement_destination")
-
-        csv_name = getNameFromPath(csv_path)
-        csv_layer = findLayerByName(csv_name)
-        changeLayerStyleByCSV(statementSource_layer, statementDestination_layer, csv_layer)
-
-        setVisibilityLayers(True, statementSource_layer, statementDestination_layer)
         setVisibilityLayers(False, source_layer, destination_layer)
-
+        statementSource_layer, statementDestination_layer = createLayerStyleByCSV(csv_path)
         zoomLayer(self, statementSource_layer)
 
 
@@ -667,7 +691,7 @@ class DiagwayProjection:
             ("Other", "ELSE", "brown")
         )
         source_rules = (
-            ("source", source_expression, "yellow"),
+            ("source", source_expression, "magenta"),
             ("Other", "ELSE", "brown")
         )
 
@@ -715,23 +739,43 @@ class DiagwayProjection:
 
         source_feats = source_layer.getFeatures()
         for feat in source_feats:
-            source_values.append(feat[source_field])
+            source_values.append(str(feat[source_field]))
 
-        for value in  [values for values in source_values if values not in source_values_done]:
-            if (value is str):
-                source_layer.setSubsetString("{} = '{}'".format(source_field, value))
+        source_values_toDo = [source_value for source_value in source_values if source_value not in source_values_done]
+        
+        progress = initProgressBar(self, len(source_values_toDo))
+
+        i = 1
+        for source_value in  source_values_toDo:
+            if (source_value is str):
+                source_layer.setSubsetString("{} = '{}'".format(source_field, source_value))
             else:
-                source_layer.setSubsetString("{} = {}".format(source_field, value))
+                source_layer.setSubsetString("{} = {}".format(source_field, source_value))
 
-            destination_values = getDestBySource(source_layer, destination_layer, value, source_field, destination_field, 50)
+            destination_values = getDestBySource(source_layer, destination_layer, source_value, source_field, destination_field, 50)
 
-            line = ""
-            for value in destination_values:
-                line += str(value) + ";"
-            line = line[:-1]
+            if (len(destination_values) > 0):
+                line = ""
+                for dest_value in destination_values:
+                    line += str(dest_value) + ";"
+                line = line[:-1]
 
-            addLineCSV(csv_path, value, line)
+                addLineCSV(csv_path, source_value, line)
 
+                progress.setValue(i)
+                i += 1
+
+        setVisibilityLayers(False, source_layer, destination_layer)
+        statementSource_layer, statementDestination_layer = createLayerStyleByCSV(csv_path)
+        zoomLayer(self, statementSource_layer)
+
+        #Clear filter 
+        source_layer.setSubsetString("")
+        destination_layer.setSubsetString("")
+
+        self.iface.messageBar().clearWidgets()
+        self.iface.messageBar().pushMessage("Done", "Destination found !", level=3, duration=4)
+        
 
     def run(self):
         """Run method that loads and starts the plugin"""
