@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>520</width>
-    <height>572</height>
+    <width>466</width>
+    <height>714</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -564,7 +564,7 @@ p, li { white-space: pre-wrap; }
            </widget>
           </item>
           <item>
-           <widget class="QLineEdit" name="lineEdit"/>
+           <widget class="QLineEdit" name="buffer_lineEdit_distance"/>
           </item>
          </layout>
         </item>
@@ -586,7 +586,7 @@ p, li { white-space: pre-wrap; }
         <item>
          <widget class="QPushButton" name="push_fullauto">
           <property name="enabled">
-           <bool>true</bool>
+           <bool>false</bool>
           </property>
           <property name="font">
            <font>
@@ -696,7 +696,7 @@ p, li { white-space: pre-wrap; }
           <property name="sizeHint" stdset="0">
            <size>
             <width>17</width>
-            <height>37</height>
+            <height>23</height>
            </size>
           </property>
          </spacer>
@@ -711,7 +711,7 @@ p, li { white-space: pre-wrap; }
        <zorder>push_cancel_3</zorder>
        <zorder>push_fullauto</zorder>
        <zorder>verticalSpacer_5</zorder>
-       <zorder>lineEdit</zorder>
+       <zorder>buffer_lineEdit_distance</zorder>
        <zorder>buffer_label_distance</zorder>
        <zorder>push_switch</zorder>
       </widget>
