@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>620</width>
+    <width>520</width>
     <height>572</height>
    </rect>
   </property>
@@ -14,8 +14,8 @@
    <string>DiagwayProjection</string>
   </property>
   <widget class="QWidget" name="dockWidgetContents">
-   <layout class="QVBoxLayout" name="verticalLayout_8">
-    <item>
+   <layout class="QGridLayout" name="gridLayout">
+    <item row="0" column="0">
      <widget class="QStackedWidget" name="stackedWidget">
       <property name="maximumSize">
        <size>
@@ -24,7 +24,7 @@
        </size>
       </property>
       <property name="currentIndex">
-       <number>0</number>
+       <number>3</number>
       </property>
       <widget class="QWidget" name="page_1">
        <layout class="QVBoxLayout" name="verticalLayout">
@@ -550,6 +550,25 @@ p, li { white-space: pre-wrap; }
          </widget>
         </item>
         <item>
+         <layout class="QHBoxLayout" name="horizontalLayout_8">
+          <item>
+           <widget class="QLabel" name="buffer_label_distance">
+            <property name="font">
+             <font>
+              <pointsize>11</pointsize>
+             </font>
+            </property>
+            <property name="text">
+             <string>Buffer distance (m)</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLineEdit" name="lineEdit"/>
+          </item>
+         </layout>
+        </item>
+        <item>
          <widget class="QPushButton" name="push_auto">
           <property name="enabled">
            <bool>false</bool>
@@ -576,6 +595,21 @@ p, li { white-space: pre-wrap; }
           </property>
           <property name="text">
            <string>Full auto</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="push_switch">
+          <property name="enabled">
+           <bool>true</bool>
+          </property>
+          <property name="font">
+           <font>
+            <pointsize>11</pointsize>
+           </font>
+          </property>
+          <property name="text">
+           <string>Switch</string>
           </property>
          </widget>
         </item>
@@ -661,8 +695,8 @@ p, li { white-space: pre-wrap; }
           </property>
           <property name="sizeHint" stdset="0">
            <size>
-            <width>20</width>
-            <height>40</height>
+            <width>17</width>
+            <height>37</height>
            </size>
           </property>
          </spacer>
@@ -677,6 +711,9 @@ p, li { white-space: pre-wrap; }
        <zorder>push_cancel_3</zorder>
        <zorder>push_fullauto</zorder>
        <zorder>verticalSpacer_5</zorder>
+       <zorder>lineEdit</zorder>
+       <zorder>buffer_label_distance</zorder>
+       <zorder>push_switch</zorder>
       </widget>
      </widget>
     </item>
