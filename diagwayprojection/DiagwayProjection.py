@@ -338,11 +338,31 @@ class DiagwayProjection:
             
 
     def checkAutoButton(self):
-        txt = self.dockwidget.sender().toPlainText()
-        if (txt == ""):
+        txt = self.dockwidget.source_textEdit_fields.toPlainText()
+        buffer_distance = self.dockwidget.buffer_lineEdit_distance.text()
+
+        try:
+            buffer_distance = int(buffer_distance)
+        except ValueError:
             self.dockwidget.push_auto.setEnabled(False)
-        else :
-            self.dockwidget.push_auto.setEnabled(True)
+            print("Value have to be an integer")
+        else:
+            if (txt == ""):
+                self.dockwidget.push_auto.setEnabled(False)
+            else :
+                self.dockwidget.push_auto.setEnabled(True)
+
+
+    def checkFullAutoButton(self):
+        buffer_distance = self.dockwidget.buffer_lineEdit_distance.text()
+
+        try:
+            buffer_distance = int(buffer_distance)
+        except ValueError:
+            self.dockwidget.push_fullauto.setEnabled(False)
+            print("Value have to be an integer")
+        else:
+            self.dockwidget.push_fullauto.setEnabled(True)
 
 
     def checkAddButton(self):
@@ -406,7 +426,7 @@ class DiagwayProjection:
         destination_field = self.dockwidget.destination_label_field.text()[:-2]
 
         source_value = self.dockwidget.source_textEdit_fields.toPlainText()
-        buffer_distance = 50
+        buffer_distance = int(self.dockwidget.buffer_lineEdit_distance.text())
 
         destination_values = getDestBySource(source_layer, destination_layer, source_value, source_field, destination_field, buffer_distance)
 
@@ -531,8 +551,6 @@ class DiagwayProjection:
         statementSource_layer = QgsLayer.findLayerByName("Statement_source")
         statementDestination_layer = QgsLayer.findLayerByName("Statement_destination")
 
-        print("ok")
-
         layers = [source_layer, destination_layer] 
         statements = [statementSource_layer, statementDestination_layer]
 
@@ -621,6 +639,8 @@ class DiagwayProjection:
 
                 #Connect lineEdit
                 self.dockwidget.lineEdit_file_complete.textChanged.connect(self.filePreview)
+                self.dockwidget.buffer_lineEdit_distance.textChanged.connect(self.checkAutoButton)
+                self.dockwidget.buffer_lineEdit_distance.textChanged.connect(self.checkFullAutoButton)
 
                 self.iface.mapCanvas().selectionChanged.connect(self.getSelectedEntity)
 
