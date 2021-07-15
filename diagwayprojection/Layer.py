@@ -79,6 +79,10 @@ class QgsLayer:
     def setVisibility(self, visibility):
         QgsProject.instance().layerTreeRoot().findLayer(self.id).setItemVisibilityChecked(visibility)
 
+    #return if layer is visible
+    def isVisible(self):
+        return QgsProject.instance().layerTreeRoot().findLayer(self.id).isVisible()
+
     #return true if layer is projected in Lambert-93
     def isLT93(self):
         return (self.crs == "EPSG:2154")
@@ -118,14 +122,12 @@ class QgsLayer:
         layer = QgsProject.instance().mapLayersByName(name)[0]
         return QgsLayer(vectorLayer=layer)
 
-
     @classmethod
     def removeLayersByName(cls, name):
         project = QgsProject.instance()
         layers = project.mapLayersByName(name)
         for l in layers:
             project.removeMapLayers([l.id()])
-
 
     @classmethod
     def styleByCSV(cls, source_layer, destination_layer, csv_path):
