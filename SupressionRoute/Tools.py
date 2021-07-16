@@ -156,6 +156,31 @@ def getAllFeatures(layer, field):
 
 
 def difference(source_layer, destination_layer):
+    extract_feats = []
     source_feats = source_layer.getFeatures()
-    destination_layer = destination_layer.getFeatures()
+    destination_feat = destination_layer.getFeatures()
+    fields = source_layer.getFields()
+
+    source_values = []
+    for source_feat in source_feats:
+        for field in fields:
+            source_values.append(source_feat[field])
+
+        fields = source_layer.getFields()
+        
+        for dest_feat in destination_feat:
+            dest_values = []
+            for field in fields:
+                dest_values.append(dest_feat[field])
+
+            fields = source_layer.getFields()
+
+            if (source_values != dest_values):
+                extract_feats.append(source_feat)
+
+        destination_feat = destination_layer.getFeatures()
+
+    return extract_feats
+
+
 
