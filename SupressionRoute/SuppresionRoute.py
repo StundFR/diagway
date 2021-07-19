@@ -33,6 +33,8 @@ from .SuppresionRoute_dockwidget import SuppresionRouteDockWidget
 from .Layer import QgsLayer
 from .Tools import *
 import os.path
+import time
+from math import floor
 
 
 class SuppresionRoute:
@@ -237,15 +239,12 @@ class SuppresionRoute:
         mergeLayers(layers, output)
 
 
-    def extractRoadDone(self, output):
-        source_layer = QgsLayer(vectorLayer=self.dockwidget.ComboBox_layers.currentLayer())
-        destination_layer = QgsLayer(output, "merged")
-        print(destination_layer.crs)
+    def getRoadDone(self, destination_layer):
+        source_layer = QgsLayer(vectorLayer=self.dockwidget.comboBox_layers.currentLayer())
         extract = []
         final_path = "C:\\temp\\diagwayProjectionTmpLayer\\mergedFinal.shp"
 
         ids = getAllFeatures(destination_layer, "section_id")
-        print(ids)
 
         if (not destination_layer.isLT93()):
             destination_layer = destination_layer.projectionLT93("C:\\temp\\diagwayProjectionTmpLayer\\reprojection.shp")
@@ -270,19 +269,47 @@ class SuppresionRoute:
 
         mergeLayers(extract, final_path)
 
-        self.iface.messageBar().clearWidgets()
-        self.iface.messageBar().pushMessage("Done", "", level=1, duration=4)
-
         return QgsLayer(final_path, "FinalMerged")
 
 
+    def getRoadUndone(self, destination_layer, output_path):
+        source_layer = QgsLayer(vectorLayer = self.dockwidget.comboBox_layers.currentLayer())
+
+        output_buffer = "C:\\temp\\diagwayProjectionTmpLayer\\finalmerged_buffer.shp"
+        if (not destination_layer.isLT93()):
+            destination_layer = destination_layer.projectionLT93("C:\\temp\\diagwayProjectionTmpLayer\\reprojection_buffer.shp")
+        destination_layer = destination_layer.buffer(2, output_buffer)
+
+        difference(source_layer.vector, destination_layer.vector, output_path)
+        return QgsLayer(output_path, "roadUndone")
+    
+
     def algo(self):
+        start = time.time()
+
         dir_path = "C:\\temp\\diagwayProjectionTmpLayer"
         createDir(dir_path)
+
         output = "C:\\temp\\diagwayProjectionTmpLayer\\merged.shp"
         self.mergedSelectLayers(output)
-        extract = self.extractRoadDone(output)
-        extract.add()
+
+        destination_layer = QgsLayer(output, "")
+        output = "C:\\temp\\diagwayProjectionTmpLayer\\getRoadDone.shp"
+        destination_layer = self.getRoadDone(destination_layer)
+
+        output = "C:\\temp\\diagwayProjectionTmpLayer\\getRoadUndone.shp"
+        final = self.getRoadUndone(destination_layer, output)
+
+        final.add()
+
+        removeDir(dir_path)
+
+        end = time.time()
+
+        print(time.strftime('%H %M %S', time.gmtime(end-start)))
+
+        self.iface.messageBar().clearWidgets()
+        self.iface.messageBar().pushMessage("Done", "", level=3, duration=4)
 
     #--------------------------------------------------------------------------
 
