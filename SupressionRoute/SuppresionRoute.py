@@ -228,7 +228,7 @@ class SuppresionRoute:
             for f in fields:
                 comboBox.addItem(f)
 
-    
+
     def checkAll(self):
         items = self.dockwidget.listWidget_layers.selectedItems()
         if (len(items) > 0):
@@ -239,7 +239,6 @@ class SuppresionRoute:
             self.dockwidget.push_ok.setEnabled(True)
         else:
             self.dockwidget.push_ok.setEnabled(False)
-
 
     #Add all layers in the list widget
     def addLayersListWidget(self):
@@ -260,21 +259,23 @@ class SuppresionRoute:
     #Create layer with all the road already recorded
     def getRoadsDone(self, destination_layer, output_path):
         source_layer = QgsLayer(vectorLayer=self.dockwidget.comboBox_layers.currentLayer())
+        field = self.dockwidget.comboBox_fields.currentText()
         extract = []
 
-        ids = getAllFeatures(destination_layer, "section_id")
+        ids = getAllFeatures(destination_layer, field)
+        ids = supprDouble(ids)
 
         if (not destination_layer.isLT93()):
-            destination_layer = destination_layer.projectionLT93("C:\\temp\\diagwayProjectionTmpLayer\\{}_LT93.shp".format(destination_layer.name))
+            destination_layer = destination_layer.projectionLT93("C:\\temp\\SupressionRouteTmpLayer\\{}_LT93.shp".format(destination_layer.name))
 
         progress = self.initProgressBar(len(ids))
         k = 1
 
         for i in ids:
-            buffer_path = "C:\\temp\\diagwayProjectionTmpLayer\\buffer_{}.shp".format(str(k))
-            extract_path = "C:\\temp\\diagwayProjectionTmpLayer\\extract_{}.shp".format(str(k))
+            buffer_path = "C:\\temp\\SupressionRouteTmpLayer\\buffer_{}.shp".format(str(k))
+            extract_path = "C:\\temp\\SupressionRouteTmpLayer\\extract_{}.shp".format(str(k))
 
-            destination_layer.filter("section_id = {}".format(i))
+            destination_layer.filter("{} = {}".format(field, i))
 
             buffer = destination_layer.buffer(50, buffer_path)
 
@@ -293,9 +294,9 @@ class SuppresionRoute:
     def getRoadsUndone(self, destination_layer, output_path):
         source_layer = QgsLayer(vectorLayer = self.dockwidget.comboBox_layers.currentLayer())
 
-        output_buffer = "C:\\temp\\diagwayProjectionTmpLayer\\{}_buffer.shp".format(destination_layer.name)
+        output_buffer = "C:\\temp\\SupressionRouteTmpLayer\\{}_buffer.shp".format(destination_layer.name)
         if (not destination_layer.isLT93()):
-            destination_layer = destination_layer.projectionLT93("C:\\temp\\diagwayProjectionTmpLayer\\{}_LT93.shp".format(destination_layer.name))
+            destination_layer = destination_layer.projectionLT93("C:\\temp\\SupressionRouteTmpLayer\\{}_LT93.shp".format(destination_layer.name))
         destination_layer = destination_layer.buffer(1, output_buffer)
 
         difference(source_layer.vector, destination_layer.vector, output_path)
@@ -303,17 +304,17 @@ class SuppresionRoute:
     
     #Algorith
     def algo(self):
-        dir_path = "C:\\temp\\diagwayProjectionTmpLayer"
+        dir_path = "C:\\temp\\SupressionRouteTmpLayer"
         createDir(dir_path)
 
-        output_path = "C:\\temp\\diagwayProjectionTmpLayer\\merged.shp"
+        output_path = "C:\\temp\\SupressionRouteTmpLayer\\merged.shp"
         self.mergedSelectLayers(output_path)
 
         destination_layer = QgsLayer(output_path, "")
-        output_path = "C:\\temp\\diagwayProjectionTmpLayer\\getRoadsDone.shp"
+        output_path = "C:\\temp\\SupressionRouteTmpLayer\\getRoadsDone.shp"
         destination_layer = self.getRoadsDone(destination_layer, output_path)
 
-        output_path = "C:\\temp\\diagwayProjectionTmpLayer\\getRoadsUndone.shp"
+        output_path = "C:\\temp\\SupressionRouteTmpLayer\\getRoadsUndone.shp"
         final = self.getRoadsUndone(destination_layer, output_path)
 
         final.add()
