@@ -33,8 +33,6 @@ from .SuppresionRoute_dockwidget import SuppresionRouteDockWidget
 from .Layer import QgsLayer
 from .Tools import *
 import os.path
-import time
-from math import floor
 
 
 class SuppresionRoute:
@@ -93,7 +91,6 @@ class SuppresionRoute:
         """
         # noinspection PyTypeChecker,PyArgumentList,PyCallByClass
         return QCoreApplication.translate('SuppresionRoute', message)
-
 
     def add_action(
         self,
@@ -168,7 +165,6 @@ class SuppresionRoute:
 
         return action
 
-
     def initGui(self):
         """Create the menu entries and toolbar icons inside the QGIS GUI."""
 
@@ -197,7 +193,6 @@ class SuppresionRoute:
 
         self.pluginIsActive = False
 
-
     def unload(self):
         """Removes the plugin menu item and icon from QGIS GUI."""
 
@@ -213,6 +208,7 @@ class SuppresionRoute:
 
     #--------------------------------------------------------------------------
 
+    #Create the progress bar
     def initProgressBar(self, max):
         progressMessageBar = self.iface.messageBar().createMessage("Running...")
         progress = QProgressBar()
@@ -223,13 +219,36 @@ class SuppresionRoute:
         return progress
 
 
+    def fillFields(self, comboBox):
+        comboBox.clear()
+        items = self.dockwidget.listWidget_layers.selectedItems()
+        if (len(items) > 0):
+            layer = QgsLayer.findLayerByName(items[0].text())
+            fields = layer.getFields()
+            for f in fields:
+                comboBox.addItem(f)
+
+    
+    def checkAll(self):
+        items = self.dockwidget.listWidget_layers.selectedItems()
+        if (len(items) > 0):
+            if (self.dockwidget.comboBox_layers.currentLayer() is None):
+                self.dockwidget.push_ok.setEnabled(False)
+                return
+        
+            self.dockwidget.push_ok.setEnabled(True)
+        else:
+            self.dockwidget.push_ok.setEnabled(False)
+
+
+    #Add all layers in the list widget
     def addLayersListWidget(self):
         listWidget = self.dockwidget.listWidget_layers
         layers = QgsProject.instance().mapLayers().values()
         for l in layers:
             listWidget.addItem(l.name())
 
-
+    #Merge selected layers
     def mergedSelectLayers(self, output):
         items = self.dockwidget.listWidget_layers.selectedItems()
         layers = []
@@ -238,16 +257,15 @@ class SuppresionRoute:
             layers.append(layer.vector)
         mergeLayers(layers, output)
 
-
-    def getRoadDone(self, destination_layer):
+    #Create layer with all the road already recorded
+    def getRoadsDone(self, destination_layer, output_path):
         source_layer = QgsLayer(vectorLayer=self.dockwidget.comboBox_layers.currentLayer())
         extract = []
-        final_path = "C:\\temp\\diagwayProjectionTmpLayer\\mergedFinal.shp"
 
         ids = getAllFeatures(destination_layer, "section_id")
 
         if (not destination_layer.isLT93()):
-            destination_layer = destination_layer.projectionLT93("C:\\temp\\diagwayProjectionTmpLayer\\reprojection.shp")
+            destination_layer = destination_layer.projectionLT93("C:\\temp\\diagwayProjectionTmpLayer\\{}_LT93.shp".format(destination_layer.name))
 
         progress = self.initProgressBar(len(ids))
         k = 1
@@ -267,46 +285,40 @@ class SuppresionRoute:
             progress.setValue(k)
             k += 1
 
-        mergeLayers(extract, final_path)
+        mergeLayers(extract, output_path)
 
-        return QgsLayer(final_path, "FinalMerged")
+        return QgsLayer(output_path, "RoadsDone")
 
-
-    def getRoadUndone(self, destination_layer, output_path):
+    #Create layer with all the road not recorded yet
+    def getRoadsUndone(self, destination_layer, output_path):
         source_layer = QgsLayer(vectorLayer = self.dockwidget.comboBox_layers.currentLayer())
 
-        output_buffer = "C:\\temp\\diagwayProjectionTmpLayer\\finalmerged_buffer.shp"
+        output_buffer = "C:\\temp\\diagwayProjectionTmpLayer\\{}_buffer.shp".format(destination_layer.name)
         if (not destination_layer.isLT93()):
-            destination_layer = destination_layer.projectionLT93("C:\\temp\\diagwayProjectionTmpLayer\\reprojection_buffer.shp")
-        destination_layer = destination_layer.buffer(2, output_buffer)
+            destination_layer = destination_layer.projectionLT93("C:\\temp\\diagwayProjectionTmpLayer\\{}_LT93.shp".format(destination_layer.name))
+        destination_layer = destination_layer.buffer(1, output_buffer)
 
         difference(source_layer.vector, destination_layer.vector, output_path)
-        return QgsLayer(output_path, "roadUndone")
+        return QgsLayer(output_path, "RoadsUndone")
     
-
+    #Algorith
     def algo(self):
-        start = time.time()
-
         dir_path = "C:\\temp\\diagwayProjectionTmpLayer"
         createDir(dir_path)
 
-        output = "C:\\temp\\diagwayProjectionTmpLayer\\merged.shp"
-        self.mergedSelectLayers(output)
+        output_path = "C:\\temp\\diagwayProjectionTmpLayer\\merged.shp"
+        self.mergedSelectLayers(output_path)
 
-        destination_layer = QgsLayer(output, "")
-        output = "C:\\temp\\diagwayProjectionTmpLayer\\getRoadDone.shp"
-        destination_layer = self.getRoadDone(destination_layer)
+        destination_layer = QgsLayer(output_path, "")
+        output_path = "C:\\temp\\diagwayProjectionTmpLayer\\getRoadsDone.shp"
+        destination_layer = self.getRoadsDone(destination_layer, output_path)
 
-        output = "C:\\temp\\diagwayProjectionTmpLayer\\getRoadUndone.shp"
-        final = self.getRoadUndone(destination_layer, output)
+        output_path = "C:\\temp\\diagwayProjectionTmpLayer\\getRoadsUndone.shp"
+        final = self.getRoadsUndone(destination_layer, output_path)
 
         final.add()
 
         removeDir(dir_path)
-
-        end = time.time()
-
-        print(time.strftime('%H %M %S', time.gmtime(end-start)))
 
         self.iface.messageBar().clearWidgets()
         self.iface.messageBar().pushMessage("Done", "", level=3, duration=4)
@@ -329,8 +341,19 @@ class SuppresionRoute:
                 self.dockwidget = SuppresionRouteDockWidget()
                 self.addLayersListWidget()
 
+                #Reset index comboBox
+                self.dockwidget.comboBox_layers.setCurrentIndex(-1)
+                self.dockwidget.comboBox_fields.setCurrentIndex(-1)
+
                 #Connect buttons
                 self.dockwidget.push_ok.clicked.connect(self.algo)
+
+                #Connect comboBox
+                self.dockwidget.comboBox_layers.layerChanged.connect(self.checkAll)
+
+                #Connect list widget
+                self.dockwidget.listWidget_layers.itemSelectionChanged.connect(lambda : self.fillFields(self.dockwidget.comboBox_fields))
+                self.dockwidget.listWidget_layers.itemSelectionChanged.connect(self.checkAll)
 
             # connect to provide cleanup on closing of dockwidget
             self.dockwidget.closingPlugin.connect(self.onClosePlugin)
