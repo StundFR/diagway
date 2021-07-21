@@ -23,20 +23,26 @@
 """
 from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, Qt
 from qgis.PyQt.QtGui import QIcon
-from qgis.PyQt.QtWidgets import QAction, QProgressBar
-from qgis.core import QgsProject
+from qgis.PyQt.QtWidgets import QAction, QProgressBar, QPushButton
+from qgis.core import QgsProject, QgsMessageLog, Qgis
 # Initialize Qt resources from file resources.py
 from .resources import *
 
 # Import the code for the DockWidget
 from .SuppresionRoute_dockwidget import SuppresionRouteDockWidget
 from .Layer import QgsLayer
+from .Worker import Worker
 from .Tools import *
 import os.path
+import traceback
+import copy
 
 
-class SuppresionRoute:
+class SuppresionRoute (QtCore.QObject):
     """QGIS Plugin Implementation."""
+
+
+
 
     def __init__(self, iface):
         """Constructor.
@@ -46,6 +52,8 @@ class SuppresionRoute:
             application at run time.
         :type iface: QgsInterface
         """
+        QtCore.QObject.__init__(self)
+
         # Save reference to the QGIS interface
         self.iface = iface
 
@@ -72,10 +80,9 @@ class SuppresionRoute:
         self.toolbar.setObjectName(u'SuppresionRoute')
 
         #print "** INITIALIZING SuppresionRoute"
-
+        self.killed = False
         self.pluginIsActive = False
         self.dockwidget = None
-
 
     # noinspection PyMethodMayBeStatic
     def tr(self, message):
@@ -91,6 +98,7 @@ class SuppresionRoute:
         """
         # noinspection PyTypeChecker,PyArgumentList,PyCallByClass
         return QCoreApplication.translate('SuppresionRoute', message)
+
 
     def add_action(
         self,
@@ -165,6 +173,7 @@ class SuppresionRoute:
 
         return action
 
+
     def initGui(self):
         """Create the menu entries and toolbar icons inside the QGIS GUI."""
 
@@ -193,6 +202,7 @@ class SuppresionRoute:
 
         self.pluginIsActive = False
 
+
     def unload(self):
         """Removes the plugin menu item and icon from QGIS GUI."""
 
@@ -207,18 +217,6 @@ class SuppresionRoute:
         del self.toolbar
 
     #--------------------------------------------------------------------------
-
-    #Create the progress bar
-    def initProgressBar(self, max):
-        progressMessageBar = self.iface.messageBar().createMessage("Running...")
-        progress = QProgressBar()
-        progress.setMaximum(max)
-        progress.setAlignment(Qt.AlignLeft|Qt.AlignVCenter)
-        progressMessageBar.layout().addWidget(progress)
-        self.iface.messageBar().pushWidget(progressMessageBar)
-        return progress
-
-
     def fillFields(self, comboBox):
         comboBox.clear()
         items = self.dockwidget.listWidget_layers.selectedItems()
@@ -240,91 +238,15 @@ class SuppresionRoute:
         else:
             self.dockwidget.push_ok.setEnabled(False)
 
+
     #Add all layers in the list widget
     def addLayersListWidget(self):
         listWidget = self.dockwidget.listWidget_layers
         layers = QgsProject.instance().mapLayers().values()
         for l in layers:
             listWidget.addItem(l.name())
-
-    #Merge selected layers
-    def mergedSelectLayers(self, output):
-        items = self.dockwidget.listWidget_layers.selectedItems()
-        layers = []
-        for i in items:
-            layer = QgsLayer.findLayerByName(i.text())
-            layers.append(layer.vector)
-        mergeLayers(layers, output)
-
-    #Create layer with all the road already recorded
-    def getRoadsDone(self, destination_layer, output_path):
-        source_layer = QgsLayer(vectorLayer=self.dockwidget.comboBox_layers.currentLayer())
-        field = self.dockwidget.comboBox_fields.currentText()
-        extract = []
-
-        ids = getAllFeatures(destination_layer, field)
-        ids = supprDouble(ids)
-
-        if (not destination_layer.isLT93()):
-            destination_layer = destination_layer.projectionLT93("C:\\temp\\SupressionRouteTmpLayer\\{}_LT93.shp".format(destination_layer.name))
-
-        progress = self.initProgressBar(len(ids))
-        k = 1
-
-        for i in ids:
-            buffer_path = "C:\\temp\\SupressionRouteTmpLayer\\buffer_{}.shp".format(str(k))
-            extract_path = "C:\\temp\\SupressionRouteTmpLayer\\extract_{}.shp".format(str(k))
-
-            destination_layer.filter("{} = {}".format(field, i))
-
-            buffer = destination_layer.buffer(50, buffer_path)
-
-            extractByLocation(source_layer, buffer, extract_path)
-
-            extract.append(QgsLayer(extract_path, str(k)).vector)
-
-            progress.setValue(k)
-            k += 1
-
-        mergeLayers(extract, output_path)
-
-        return QgsLayer(output_path, "RoadsDone")
-
-    #Create layer with all the road not recorded yet
-    def getRoadsUndone(self, destination_layer, output_path):
-        source_layer = QgsLayer(vectorLayer = self.dockwidget.comboBox_layers.currentLayer())
-
-        output_buffer = "C:\\temp\\SupressionRouteTmpLayer\\{}_buffer.shp".format(destination_layer.name)
-        if (not destination_layer.isLT93()):
-            destination_layer = destination_layer.projectionLT93("C:\\temp\\SupressionRouteTmpLayer\\{}_LT93.shp".format(destination_layer.name))
-        destination_layer = destination_layer.buffer(1, output_buffer)
-
-        difference(source_layer.vector, destination_layer.vector, output_path)
-        return QgsLayer(output_path, "RoadsUndone")
-    
-    #Algorith
-    def algo(self):
-        dir_path = "C:\\temp\\SupressionRouteTmpLayer"
-        createDir(dir_path)
-
-        output_path = "C:\\temp\\SupressionRouteTmpLayer\\merged.shp"
-        self.mergedSelectLayers(output_path)
-
-        destination_layer = QgsLayer(output_path, "")
-        output_path = "C:\\temp\\SupressionRouteTmpLayer\\getRoadsDone.shp"
-        destination_layer = self.getRoadsDone(destination_layer, output_path)
-
-        output_path = "C:\\temp\\SupressionRouteTmpLayer\\getRoadsUndone.shp"
-        final = self.getRoadsUndone(destination_layer, output_path)
-
-        final.add()
-
-        removeDir(dir_path)
-
-        self.iface.messageBar().clearWidgets()
-        self.iface.messageBar().pushMessage("Done", "", level=3, duration=4)
-
     #--------------------------------------------------------------------------
+
 
     def run(self):
         """Run method that loads and starts the plugin"""
@@ -347,7 +269,7 @@ class SuppresionRoute:
                 self.dockwidget.comboBox_fields.setCurrentIndex(-1)
 
                 #Connect buttons
-                self.dockwidget.push_ok.clicked.connect(self.algo)
+                self.dockwidget.push_ok.clicked.connect(self.startAlgo)
 
                 #Connect comboBox
                 self.dockwidget.comboBox_layers.layerChanged.connect(self.checkAll)
@@ -363,3 +285,53 @@ class SuppresionRoute:
             # TODO: fix to allow choice of dock location
             self.iface.addDockWidget(Qt.RightDockWidgetArea, self.dockwidget)
             self.dockwidget.show()
+
+
+    def startAlgo(self):
+        items = self.dockwidget.listWidget_layers.selectedItems()
+        source_layer = QgsLayer(vectorLayer=self.dockwidget.comboBox_layers.currentLayer())
+        field = self.dockwidget.comboBox_fields.currentText()
+        worker = Worker(items, source_layer, field)
+
+        # configure the QgsMessageBar
+        messageBar = self.iface.messageBar().createMessage('Running...', )
+        progressBar = QProgressBar()
+        progressBar.setAlignment(QtCore.Qt.AlignLeft|QtCore.Qt.AlignVCenter)
+        cancelButton = QPushButton()
+        cancelButton.setText('Cancel')
+        cancelButton.clicked.connect(worker.kill)
+        messageBar.layout().addWidget(progressBar)
+        messageBar.layout().addWidget(cancelButton)
+        self.iface.messageBar().pushWidget(messageBar)
+        self.messageBar = messageBar
+
+        # start the worker in a new thread
+        thread = QtCore.QThread(self)
+        worker.moveToThread(thread)
+        worker.finished.connect(self.algoFinished)
+        worker.error.connect(self.algoError)
+        worker.progress.connect(progressBar.setValue)
+        thread.started.connect(worker.run)
+        thread.start()
+        self.thread = thread
+        self.worker = worker
+
+
+    def algoFinished(self, layer):
+        # clean up the worker and thread
+        self.worker.deleteLater()
+        self.thread.quit()
+        self.thread.wait()
+        self.thread.deleteLater()
+        # remove widget from message bar
+        self.iface.messageBar().popWidget(self.messageBar)
+        if layer is not None:
+            # report the result
+            layer.add()
+            self.iface.messageBar().pushMessage('The layer {} is created.'.format(layer.name))
+        else:
+            # notify the user that something went wrong
+            self.iface.messageBar().pushMessage('Something went wrong! See the message log for more information.', level=Qgis.Critical, duration=3)
+
+    def algoError(self, e, exception_string):
+        QgsMessageLog.logMessage('Worker thread raised an exception:\n'.format(exception_string), level=Qgis.Critical)
