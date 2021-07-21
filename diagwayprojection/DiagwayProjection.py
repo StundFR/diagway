@@ -23,7 +23,7 @@
 """
 from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, Qt
 from qgis.PyQt.QtGui import QIcon
-from qgis.PyQt.QtWidgets import QAction, QFileDialog, QProgressBar
+from qgis.PyQt.QtWidgets import QAction, QFileDialog, QProgressBar, QPushButton
 from qgis.core import QgsMapLayerProxyModel
 
 # Initialize Qt resources from file resources.py
@@ -32,18 +32,16 @@ from .resources import *
 # Import the code for the DockWidget
 from .DiagwayProjection_dockwidget import DiagwayProjectionDockWidget
 from .Layer import QgsLayer
+from .Worker import Worker
 from .Tools import *
 
 
-class DiagwayProjection:
-    """Constructor"""
+class DiagwayProjection(QtCore.QObject):
+    """Constructor & Variables"""
     def __init__(self, iface):
-        """Constructor.
-        :param iface: An interface instance that will be passed to this class
-            which provides the hook by which you can manipulate the QGIS
-            application at run time.
-        :type iface: QgsInterface
-        """
+        #Multi-threading
+        QtCore.QObject.__init__(self)
+
         # Save reference to the QGIS interface
         self.iface = iface
 
@@ -70,12 +68,11 @@ class DiagwayProjection:
         self.toolbar.setObjectName(u'DiagwayProjection')
 
         #print "** INITIALIZING DiagwayProjection"
-
         self.pluginIsActive = False
         self.dockwidget = None
+    #--------------------------------------------------------------------------
 
-
-    """Method"""
+    """Function for the plugins"""
     # noinspection PyMethodMayBeStatic
     def tr(self, message):
         """Get the translation for a string using Qt translation API.
@@ -90,7 +87,6 @@ class DiagwayProjection:
         """
         # noinspection PyTypeChecker,PyArgumentList,PyCallByClass
         return QCoreApplication.translate('DiagwayProjection', message)
-
 
     def add_action(
         self,
@@ -165,7 +161,6 @@ class DiagwayProjection:
 
         return action
 
-
     def initGui(self):
         """Create the menu entries and toolbar icons inside the QGIS GUI."""
 
@@ -175,17 +170,6 @@ class DiagwayProjection:
             text=self.tr(u'DiagwayProjection'),
             callback=self.run,
             parent=self.iface.mainWindow())
-
-
-    def initProgressBar(self, max):
-        progressMessageBar = self.iface.messageBar().createMessage("Running...")
-        progress = QProgressBar()
-        progress.setMaximum(max)
-        progress.setAlignment(Qt.AlignLeft|Qt.AlignVCenter)
-        progressMessageBar.layout().addWidget(progress)
-        self.iface.messageBar().pushWidget(progressMessageBar)
-        return progress
-
 
     def onClosePlugin(self):
         """Cleanup necessary items here when plugin dockwidget is closed"""
@@ -203,7 +187,6 @@ class DiagwayProjection:
 
         self.pluginIsActive = False
 
-
     def unload(self):
         """Removes the plugin menu item and icon from QGIS GUI."""
 
@@ -216,7 +199,9 @@ class DiagwayProjection:
             self.iface.removeToolBarIcon(action)
         # remove the toolbar
         del self.toolbar
+    #--------------------------------------------------------------------------
 
+    """Function for the algorithm"""
     #Create the path for the CSV file
     def saveFile(self):
         filename, _filter = QFileDialog.getSaveFileName(self.dockwidget, "Select output file ","", '*.csv')
@@ -475,7 +460,6 @@ class DiagwayProjection:
         destination_layer.setVisibility(True)
 
         #Clear message
-        self.iface.messageBar().clearWidgets()
         if (isEmpty):
             source_layer.filter(source_expression)
             source_layer.zoom(self)
@@ -489,62 +473,6 @@ class DiagwayProjection:
         source_layer.filter("")
         destination_layer.filter("")
 
-
-    def fullAuto(self):
-        source_layer, destination_layer, csv_path = self.getSourceDestFile()
-        source_field = self.dockwidget.source_label_field.text()[:-2]
-        destination_field = self.dockwidget.destination_label_field.text()[:-2]
-        source_values_done = []
-        source_values = []
-
-        with open(csv_path, "r") as csv:
-            csv_lines = csv.readlines()
-
-        for line in csv_lines:
-            source_values_done.append(line.split(";")[0])
-        source_values_done.pop(0)
-
-        source_feats = source_layer.getFeatures()
-        for feat in source_feats:
-            source_values.append(str(feat[source_field]))
-
-        source_values_toDo = [source_value for source_value in source_values if source_value not in source_values_done]
-        
-        progress = self.initProgressBar(len(source_values_toDo))
-
-        i = 1
-        for source_value in  source_values_toDo:
-            if (source_value is str):
-                source_layer.filter("{} = '{}'".format(source_field, source_value))
-            else:
-                source_layer.filter("{} = {}".format(source_field, source_value))
-
-            destination_values = getDestBySource(source_layer, destination_layer, source_value, source_field, destination_field, 50)
-
-            if (len(destination_values) > 0):
-                line = ""
-                for dest_value in destination_values:
-                    line += str(dest_value) + ";"
-                line = line[:-1]
-
-                addLineCSV(csv_path, source_value, line)
-
-                progress.setValue(i)
-                i += 1
-
-        source_layer.setVisibility(False)
-        destination_layer.setVisibility(False)
-
-        statementSource_layer, statementDestination_layer = createLayerStyleByCSV(csv_path)
-        statementSource_layer.zoom(self)
-
-        #Clear filter 
-        source_layer.filter("")
-        destination_layer.filter("")
-
-        self.iface.messageBar().clearWidgets()
-        self.iface.messageBar().pushMessage("Done", "Destination found !", level=3, duration=4)
-        
 
     def switch(self):
         source_layer, destination_layer, csv_path = self.getSourceDestFile()
@@ -564,11 +492,60 @@ class DiagwayProjection:
 
         for l in statements:
             l.setVisibility(not visibility)
+    #--------------------------------------------------------------------------
 
+    """Full auto function"""
+    def startAlgo(self):
+        source_layer, destination_layer, csv_path = self.getSourceDestFile()
+        source_field = self.dockwidget.source_label_field.text()[:-2]
+        destination_field = self.dockwidget.destination_label_field.text()[:-2]
+        worker = Worker(source_layer, destination_layer, csv_path, source_field, destination_field)
 
+        # configure the QgsMessageBar
+        messageBar = self.iface.messageBar().createMessage('Running...', )
+        progressBar = QProgressBar()
+        progressBar.setAlignment(QtCore.Qt.AlignLeft|QtCore.Qt.AlignVCenter)
+        cancelButton = QPushButton()
+        cancelButton.setText('Cancel')
+        cancelButton.clicked.connect(worker.kill)
+        messageBar.layout().addWidget(progressBar)
+        messageBar.layout().addWidget(cancelButton)
+        self.iface.messageBar().pushWidget(messageBar)
+        self.messageBar = messageBar
+
+        # start the worker in a new thread
+        thread = QtCore.QThread(self)
+        worker.moveToThread(thread)
+        worker.finished.connect(self.algoFinished)
+        worker.error.connect(self.algoError)
+        worker.progress.connect(progressBar.setValue)
+        thread.started.connect(worker.run)
+        thread.start()
+        self.thread = thread
+        self.worker = worker
+
+    def algoFinished(self, layer):
+        # clean up the worker and thread
+        self.worker.deleteLater()
+        self.thread.quit()
+        self.thread.wait()
+        self.thread.deleteLater()
+        # remove widget from message bar
+        self.iface.messageBar().popWidget(self.messageBar)
+        if layer is not None:
+            # report the result
+            layer.zoom(self)
+            self.iface.messageBar().pushMessage("Done", "Algorith is finished", level=3, duration=4)
+        else:
+            # notify the user that something went wrong
+            self.iface.messageBar().pushMessage("Error", "Something went wrong... Check out the logs message for further informations", level=4, duration=4)
+
+    def algoError(self, e, exception_string):
+        QgsMessageLog.logMessage('Worker thread raised an exception:\n'.format(exception_string), level=Qgis.Critical)
+    #--------------------------------------------------------------------------
+
+    """Run"""
     def run(self):
-        """Run method that loads and starts the plugin"""
-
         if not self.pluginIsActive:
             self.pluginIsActive = True
 
@@ -629,7 +606,7 @@ class DiagwayProjection:
                 self.dockwidget.push_next_complete.clicked.connect(self.setupPage3)
                 self.dockwidget.push_add.clicked.connect(self.addFields)
                 self.dockwidget.push_auto.clicked.connect(self.getAutoDestinationFields)
-                self.dockwidget.push_fullauto.clicked.connect(self.fullAuto)
+                self.dockwidget.push_fullauto.clicked.connect(self.startAlgo)
                 self.dockwidget.push_switch.clicked.connect(self.switch)
 
                 #Connect textEdit
