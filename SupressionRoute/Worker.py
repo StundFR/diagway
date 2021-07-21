@@ -1,16 +1,13 @@
-from qgis.core import *
-from PyQt5 import QtCore, QtGui
+from PyQt5 import QtCore
 from .Layer import QgsLayer
 from .Tools import *
 import traceback
-import time
 
 class Worker(QtCore.QObject):
-    
+    """Constructor & Variables"""
     finished = QtCore.pyqtSignal(QgsLayer)
     error = QtCore.pyqtSignal(Exception, str)
     progress = QtCore.pyqtSignal(float)
-
 
     def __init__(self, items, source_layer, field):
         QtCore.QObject.__init__(self)
@@ -18,9 +15,11 @@ class Worker(QtCore.QObject):
         self.source_layer = source_layer
         self.field = field
         self.killed = False
+    #--------------------------------------------------------------------------
 
+    """Function for the algorithm"""
     def kill(self):
-        self.kill = True
+        self.killed = True
 
     #Merge selected layers
     def mergedSelectLayers(self, output):
@@ -56,8 +55,9 @@ class Worker(QtCore.QObject):
         self.progress.emit(0)
 
         for i in ids:
-            if (self.killed):
-                break
+            if self.killed:
+                self.progress.emit(100)
+                return None
 
             buffer_path = "C:\\temp\\SupressionRouteTmpLayer\\buffer_{}.shp".format(str(progress_count))
             extract_path = "C:\\temp\\SupressionRouteTmpLayer\\extract_{}.shp".format(str(progress_count))
@@ -72,10 +72,6 @@ class Worker(QtCore.QObject):
 
             progress_count += 1
             self.progress.emit((progress_count / length)*100)
-
-            if self.killed is True:
-                self.progress.emit(100)
-                return None
 
         mergeLayers(extract, output_path)
 
@@ -107,8 +103,9 @@ class Worker(QtCore.QObject):
         self.progress.emit(100)
 
         return QgsLayer(output_path, "RoadsUndone")
+    #--------------------------------------------------------------------------
     
-    #Algorith
+    """Run"""
     def run(self):
         try:
             dir_path = "C:\\temp\\SupressionRouteTmpLayer"
@@ -124,6 +121,7 @@ class Worker(QtCore.QObject):
             output_path = "C:\\temp\\SupressionRouteTmpLayer\\getRoadsUndone.shp"
             layer = self.getRoadsUndone(destination_layer, output_path)
         except Exception as e:
+            layer = None
             self.error.emit(e, traceback.format_exc())
             
         self.finished.emit(layer)

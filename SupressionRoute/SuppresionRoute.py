@@ -34,16 +34,10 @@ from .Layer import QgsLayer
 from .Worker import Worker
 from .Tools import *
 import os.path
-import traceback
-import copy
 
 
 class SuppresionRoute (QtCore.QObject):
-    """QGIS Plugin Implementation."""
-
-
-
-
+    """Constructor & Variables"""
     def __init__(self, iface):
         """Constructor.
 
@@ -83,7 +77,9 @@ class SuppresionRoute (QtCore.QObject):
         self.killed = False
         self.pluginIsActive = False
         self.dockwidget = None
+    #--------------------------------------------------------------------------
 
+    """Function for the plugins"""
     # noinspection PyMethodMayBeStatic
     def tr(self, message):
         """Get the translation for a string using Qt translation API.
@@ -98,7 +94,6 @@ class SuppresionRoute (QtCore.QObject):
         """
         # noinspection PyTypeChecker,PyArgumentList,PyCallByClass
         return QCoreApplication.translate('SuppresionRoute', message)
-
 
     def add_action(
         self,
@@ -173,7 +168,6 @@ class SuppresionRoute (QtCore.QObject):
 
         return action
 
-
     def initGui(self):
         """Create the menu entries and toolbar icons inside the QGIS GUI."""
 
@@ -183,8 +177,6 @@ class SuppresionRoute (QtCore.QObject):
             text=self.tr(u''),
             callback=self.run,
             parent=self.iface.mainWindow())
-
-    #--------------------------------------------------------------------------
 
     def onClosePlugin(self):
         """Cleanup necessary items here when plugin dockwidget is closed"""
@@ -202,7 +194,6 @@ class SuppresionRoute (QtCore.QObject):
 
         self.pluginIsActive = False
 
-
     def unload(self):
         """Removes the plugin menu item and icon from QGIS GUI."""
 
@@ -215,8 +206,9 @@ class SuppresionRoute (QtCore.QObject):
             self.iface.removeToolBarIcon(action)
         # remove the toolbar
         del self.toolbar
-
     #--------------------------------------------------------------------------
+
+    """Function for the algorithm"""
     def fillFields(self, comboBox):
         comboBox.clear()
         items = self.dockwidget.listWidget_layers.selectedItems()
@@ -238,7 +230,6 @@ class SuppresionRoute (QtCore.QObject):
         else:
             self.dockwidget.push_ok.setEnabled(False)
 
-
     #Add all layers in the list widget
     def addLayersListWidget(self):
         listWidget = self.dockwidget.listWidget_layers
@@ -247,7 +238,57 @@ class SuppresionRoute (QtCore.QObject):
             listWidget.addItem(l.name())
     #--------------------------------------------------------------------------
 
+    """Function for the multithreading"""
+    def startAlgo(self):
+        items = self.dockwidget.listWidget_layers.selectedItems()
+        source_layer = QgsLayer(vectorLayer=self.dockwidget.comboBox_layers.currentLayer())
+        field = self.dockwidget.comboBox_fields.currentText()
+        worker = Worker(items, source_layer, field)
 
+        # configure the QgsMessageBar
+        messageBar = self.iface.messageBar().createMessage('Running...', )
+        progressBar = QProgressBar()
+        progressBar.setAlignment(QtCore.Qt.AlignLeft|QtCore.Qt.AlignVCenter)
+        cancelButton = QPushButton()
+        cancelButton.setText('Cancel')
+        cancelButton.clicked.connect(worker.kill)
+        messageBar.layout().addWidget(progressBar)
+        messageBar.layout().addWidget(cancelButton)
+        self.iface.messageBar().pushWidget(messageBar)
+        self.messageBar = messageBar
+
+        # start the worker in a new thread
+        thread = QtCore.QThread(self)
+        worker.moveToThread(thread)
+        worker.finished.connect(self.algoFinished)
+        worker.error.connect(self.algoError)
+        worker.progress.connect(progressBar.setValue)
+        thread.started.connect(worker.run)
+        thread.start()
+        self.thread = thread
+        self.worker = worker
+
+    def algoFinished(self, layer):
+        # clean up the worker and thread
+        self.worker.deleteLater()
+        self.thread.quit()
+        self.thread.wait()
+        self.thread.deleteLater()
+        # remove widget from message bar
+        self.iface.messageBar().popWidget(self.messageBar)
+        if layer is not None:
+            # report the result
+            layer.add()
+            self.iface.messageBar().pushMessage('The layer {} is created.'.format(layer.name))
+        else:
+            # notify the user that something went wrong
+            self.iface.messageBar().pushMessage('Something went wrong! See the message log for more information.', level=Qgis.Critical, duration=3)
+
+    def algoError(self, e, exception_string):
+        QgsMessageLog.logMessage('Worker thread raised an exception:\n'.format(exception_string), level=Qgis.Critical)
+    #--------------------------------------------------------------------------
+
+    """Run"""
     def run(self):
         """Run method that loads and starts the plugin"""
 
@@ -285,53 +326,3 @@ class SuppresionRoute (QtCore.QObject):
             # TODO: fix to allow choice of dock location
             self.iface.addDockWidget(Qt.RightDockWidgetArea, self.dockwidget)
             self.dockwidget.show()
-
-
-    def startAlgo(self):
-        items = self.dockwidget.listWidget_layers.selectedItems()
-        source_layer = QgsLayer(vectorLayer=self.dockwidget.comboBox_layers.currentLayer())
-        field = self.dockwidget.comboBox_fields.currentText()
-        worker = Worker(items, source_layer, field)
-
-        # configure the QgsMessageBar
-        messageBar = self.iface.messageBar().createMessage('Running...', )
-        progressBar = QProgressBar()
-        progressBar.setAlignment(QtCore.Qt.AlignLeft|QtCore.Qt.AlignVCenter)
-        cancelButton = QPushButton()
-        cancelButton.setText('Cancel')
-        cancelButton.clicked.connect(worker.kill)
-        messageBar.layout().addWidget(progressBar)
-        messageBar.layout().addWidget(cancelButton)
-        self.iface.messageBar().pushWidget(messageBar)
-        self.messageBar = messageBar
-
-        # start the worker in a new thread
-        thread = QtCore.QThread(self)
-        worker.moveToThread(thread)
-        worker.finished.connect(self.algoFinished)
-        worker.error.connect(self.algoError)
-        worker.progress.connect(progressBar.setValue)
-        thread.started.connect(worker.run)
-        thread.start()
-        self.thread = thread
-        self.worker = worker
-
-
-    def algoFinished(self, layer):
-        # clean up the worker and thread
-        self.worker.deleteLater()
-        self.thread.quit()
-        self.thread.wait()
-        self.thread.deleteLater()
-        # remove widget from message bar
-        self.iface.messageBar().popWidget(self.messageBar)
-        if layer is not None:
-            # report the result
-            layer.add()
-            self.iface.messageBar().pushMessage('The layer {} is created.'.format(layer.name))
-        else:
-            # notify the user that something went wrong
-            self.iface.messageBar().pushMessage('Something went wrong! See the message log for more information.', level=Qgis.Critical, duration=3)
-
-    def algoError(self, e, exception_string):
-        QgsMessageLog.logMessage('Worker thread raised an exception:\n'.format(exception_string), level=Qgis.Critical)
