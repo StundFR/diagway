@@ -492,6 +492,47 @@ class DiagwayProjection(QtCore.QObject):
 
         for l in statements:
             l.setVisibility(not visibility)
+    
+
+    def showField(self):
+        destination_textEdit = self.dockwidget.destination_textEdit_fields
+        source_field = self.dockwidget.source_label_field.text()[:-2]
+        destination_field = self.dockwidget.destination_label_field.text()[:-2]
+        source_field_value = self.sender().toPlainText()
+        source_layer, destination_layer, csv_path = self.getSourceDestFile()
+
+        with open(csv_path, "r") as csv:
+            lines = csv.readlines()
+
+        for line in lines:
+            id = line.split("\"")[0]
+            id = id[:-1]
+            if (source_field_value == id):
+                destination_field_value = line.split("\"")[1]
+                destination_textEdit.setText(destination_field_value)
+
+                source_expression = "\"{}\" = {}".format(source_field, source_field_value)
+                destination_expression = "\"{}\" in ('{}')".format(destination_field, destination_field_value.replace(";", "','"))
+
+                source_statement = QgsLayer.findLayerByName("Statement_source")
+                dest_statement = QgsLayer.findLayerByName("Statement_destination")
+
+                source_statement.setVisibility(False)
+                dest_statement.setVisibility(False)
+                source_layer.setVisibility(True)
+                destination_layer.setVisibility(True)
+
+
+                source_layer.vector.selectByExpression(source_expression)
+                destination_layer.vector.selectByExpression(destination_expression)
+
+                destination_layer.filter(destination_expression)
+                source_layer.zoom(self)
+                destination_layer.filter("")
+                return
+
+        destination_textEdit.setText("")
+    
     #--------------------------------------------------------------------------
 
     """Full auto function"""
@@ -613,6 +654,7 @@ class DiagwayProjection(QtCore.QObject):
                 self.dockwidget.source_textEdit_fields.textChanged.connect(self.checkAutoButton)
                 self.dockwidget.source_textEdit_fields.textChanged.connect(self.checkAddButton)
                 self.dockwidget.destination_textEdit_fields.textChanged.connect(self.checkAddButton)
+                self.dockwidget.source_textEdit_fields.selectionChanged.connect(self.showField)
 
                 #Connect lineEdit
                 self.dockwidget.lineEdit_file_complete.textChanged.connect(self.filePreview)
