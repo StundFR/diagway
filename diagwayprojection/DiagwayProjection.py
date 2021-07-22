@@ -236,15 +236,6 @@ class DiagwayProjection(QtCore.QObject):
         for f in fields:
             comboBox.addItem(f.name())
 
-    #Check if layer have lambert93 projection
-    def isLayerLambert93(self):
-        source_layer, destination_layer, csv_path = self.getSourceDestFile()
-
-        if ((source_layer != None) and source_layer.isLT93()):
-            self.dockwidget.source_img_warning.setHidden(False)
-        if ((destination_layer != None) and destination_layer.isLT93()):
-            self.dockwidget.destination_img_warning.setHidden(False)
-
     #Check if all box are correct
     def checkAll(self):
         source_layer, destination_layer, csv_path = self.getSourceDestFile()
@@ -323,7 +314,7 @@ class DiagwayProjection(QtCore.QObject):
             
 
     def checkAutoButton(self):
-        txt = self.dockwidget.source_textEdit_fields.toPlainText()
+        txt = self.dockwidget.source_lineEdit_fields.text()
         buffer_distance = self.dockwidget.buffer_lineEdit_distance.text()
 
         try:
@@ -351,8 +342,8 @@ class DiagwayProjection(QtCore.QObject):
 
 
     def checkAddButton(self):
-        source_textEdit = self.dockwidget.source_textEdit_fields.toPlainText()
-        destination_textEdit = self.dockwidget.destination_textEdit_fields.toPlainText()
+        source_textEdit = self.dockwidget.source_lineEdit_fields.text()
+        destination_textEdit = self.dockwidget.destination_lineEdit_fields.text()
 
         if ((destination_textEdit == "") or (source_textEdit == "")):
             self.dockwidget.push_add.setEnabled(False)
@@ -382,20 +373,20 @@ class DiagwayProjection(QtCore.QObject):
         destination_fields = destination_fields[:-1]
 
         if (source_fields != ""):
-            self.dockwidget.source_textEdit_fields.setText(source_fields)
-        self.dockwidget.destination_textEdit_fields.setText(destination_fields)       
+            self.dockwidget.source_lineEdit_fields.setText(source_fields)
+        self.dockwidget.destination_lineEdit_fields.setText(destination_fields)       
 
 
     def addFields(self):
         source_layer, destination_layer, csv_path = self.getSourceDestFile()
 
-        source_text = self.dockwidget.source_textEdit_fields.toPlainText()
-        destination_text = self.dockwidget.destination_textEdit_fields.toPlainText()
+        source_text = self.dockwidget.source_lineEdit_fields.text()
+        destination_text = self.dockwidget.destination_lineEdit_fields.text()
 
         addLineCSV(csv_path, source_text, destination_text)
 
-        self.dockwidget.source_textEdit_fields.setText("")
-        self.dockwidget.destination_textEdit_fields.setText("")
+        self.dockwidget.source_lineEdit_fields.setText("")
+        self.dockwidget.destination_lineEdit_fields.setText("")
 
         source_layer.setVisibility(False)
         destination_layer.setVisibility(False)
@@ -410,7 +401,7 @@ class DiagwayProjection(QtCore.QObject):
         source_field = self.dockwidget.source_label_field.text()[:-2]
         destination_field = self.dockwidget.destination_label_field.text()[:-2]
 
-        source_value = self.dockwidget.source_textEdit_fields.toPlainText()
+        source_value = self.dockwidget.source_lineEdit_fields.text()
         buffer_distance = int(self.dockwidget.buffer_lineEdit_distance.text())
 
         destination_values = getDestBySource(source_layer, destination_layer, source_value, source_field, destination_field, buffer_distance)
@@ -427,7 +418,7 @@ class DiagwayProjection(QtCore.QObject):
         line = line[:-1]
 
         #Write line
-        self.dockwidget.destination_textEdit_fields.setText(line)
+        self.dockwidget.destination_lineEdit_fields.setText(line)
 
         #Filter
         destination_expression = expressionFromFields(destination_field, line)
@@ -495,10 +486,10 @@ class DiagwayProjection(QtCore.QObject):
     
 
     def showField(self):
-        destination_textEdit = self.dockwidget.destination_textEdit_fields
+        destination_textEdit = self.dockwidget.destination_lineEdit_fields
         source_field = self.dockwidget.source_label_field.text()[:-2]
         destination_field = self.dockwidget.destination_label_field.text()[:-2]
-        source_field_value = self.sender().toPlainText()
+        source_field_value = self.sender().text()
         source_layer, destination_layer, csv_path = self.getSourceDestFile()
 
         with open(csv_path, "r") as csv:
@@ -522,13 +513,12 @@ class DiagwayProjection(QtCore.QObject):
                 source_layer.setVisibility(True)
                 destination_layer.setVisibility(True)
 
+                destination_layer.filter(destination_expression)
+                destination_layer.zoom(self)
+                destination_layer.filter("")
 
                 source_layer.vector.selectByExpression(source_expression)
                 destination_layer.vector.selectByExpression(destination_expression)
-
-                destination_layer.filter(destination_expression)
-                source_layer.zoom(self)
-                destination_layer.filter("")
                 return
 
         destination_textEdit.setText("")
@@ -611,14 +601,6 @@ class DiagwayProjection(QtCore.QObject):
                 self.dockwidget.source_comboBox_layers_complete.setFilters(QgsMapLayerProxyModel.VectorLayer)
                 self.dockwidget.destination_comboBox_layers_complete.setFilters(QgsMapLayerProxyModel.VectorLayer)
 
-                #Check the projection of layer
-                self.dockwidget.source_comboBox_layers.layerChanged.connect(self.isLayerLambert93)
-                self.dockwidget.destination_comboBox_layers.layerChanged.connect(self.isLayerLambert93)
-
-                #Hide warning pic
-                self.dockwidget.source_img_warning.setHidden(False)
-                self.dockwidget.destination_img_warning.setHidden(False)
-
                 #Display fields of selected layers
                 self.dockwidget.source_comboBox_layers.layerChanged.connect(lambda : self.fillFields(self.dockwidget.source_comboBox_fields))
                 self.dockwidget.destination_comboBox_layers.layerChanged.connect(lambda : self.fillFields(self.dockwidget.destination_comboBox_fields))
@@ -651,10 +633,10 @@ class DiagwayProjection(QtCore.QObject):
                 self.dockwidget.push_switch.clicked.connect(self.switch)
 
                 #Connect textEdit
-                self.dockwidget.source_textEdit_fields.textChanged.connect(self.checkAutoButton)
-                self.dockwidget.source_textEdit_fields.textChanged.connect(self.checkAddButton)
-                self.dockwidget.destination_textEdit_fields.textChanged.connect(self.checkAddButton)
-                self.dockwidget.source_textEdit_fields.selectionChanged.connect(self.showField)
+                self.dockwidget.source_lineEdit_fields.textChanged.connect(self.checkAutoButton)
+                self.dockwidget.source_lineEdit_fields.textChanged.connect(self.checkAddButton)
+                self.dockwidget.destination_lineEdit_fields.textChanged.connect(self.checkAddButton)
+                self.dockwidget.source_lineEdit_fields.editingFinished.connect(self.showField)
 
                 #Connect lineEdit
                 self.dockwidget.lineEdit_file_complete.textChanged.connect(self.filePreview)
