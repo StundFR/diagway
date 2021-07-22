@@ -1,5 +1,6 @@
-from qgis.core import QgsVectorLayer, QgsVectorFileWriter, QgsWkbTypes, QgsProject, QgsRuleBasedRenderer, QgsSymbol
+from qgis.core import QgsVectorLayer, QgsVectorFileWriter, QgsWkbTypes, QgsProject, QgsRuleBasedRenderer, QgsSymbol, QgsVectorDataProvider, QgsField
 from qgis.PyQt.QtGui import QColor
+from PyQt5.QtCore import *
 
 class QgsLayer:
     """Constructor"""
@@ -33,9 +34,13 @@ class QgsLayer:
 
     #get type of field of layer
     def typeOfField(self, field_name):
-        feats = self.vector.getFeatures()
+        feats = self.getFeatures()
         for feat in feats:
-            return type(feat[field_name])
+            try:
+                res = type(feat[field_name])
+            except KeyError:
+                res = type("")
+            return res
 
     #zoom on layer
     def zoom(self, dlg):
@@ -72,8 +77,10 @@ class QgsLayer:
     #clone layer
     def clone(self):
         name = self.name + "_clone"
-        clone = self.vector.clone()
-        return QgsLayer(vectorLayer=clone)
+        clone_vector = self.vector.clone()
+        clone_layer = QgsLayer(vectorLayer=clone_vector)
+        clone_layer.setName(name)
+        return clone_layer
 
     #set visibility of layer
     def setVisibility(self, visibility):
@@ -113,6 +120,38 @@ class QgsLayer:
             root_rule.appendChild(rule)
         root_rule.removeChildAt(0)
         self.vector.setRenderer(renderer)
+
+
+    def addLengthFeat(self):
+        self.vector.startEditing()
+        caps = self.vector.dataProvider().capabilities()
+        features = self.getFeatures()
+
+        if caps & QgsVectorDataProvider.AddAttributes:
+            self.vector.dataProvider().addAttributes([QgsField("Length", QVariant.Double, "Double")])
+        self.vector.commitChanges()
+
+        self.vector.startEditing()
+        idx = self.vector.fields().indexFromName('Length')
+        for feature in features:
+            if caps & QgsVectorDataProvider.ChangeAttributeValues:
+                fid = feature.id()
+                flen = feature.geometry().length()
+                self.vector.changeAttributeValue(fid, idx, flen)
+        self.vector.commitChanges()
+
+
+    def getAllFeatures(self, field):
+        features = self.getFeatures()
+        feats = []
+        for f in features:
+            feats.append(f[field])
+        return feats
+
+
+    def export(self, output_path):
+        writer = QgsVectorFileWriter.writeAsVectorFormat(self.vector, output_path, 'UTF-8', self.vector.sourceCrs(), 'ESRI Shapefile')
+        del(writer)
 
 
     """class functions"""

@@ -1,4 +1,5 @@
 from qgis import processing
+from qgis.core import QgsVectorFileWriter, QgsWkbTypes
 from os import mkdir
 import os.path
 import shutil
@@ -14,15 +15,17 @@ def supprDouble(list):
 
 
 def createDir(dir_path):
-    if os.path.exists(dir_path):
-        try:
-            shutil.rmtree(dir_path)
-        except OSError as e:
-            print("Error: %s - %s." % (e.filename, e.strerror))
     try:
         mkdir(dir_path)
     except FileExistsError:
         print("Directory already exists")
+
+
+def removeDir(dir_path):
+    try:
+        shutil.rmtree(dir_path)
+    except OSError as e:
+        print("Error: %s - %s." % (e.filename, e.strerror))
 
 
 def getNameFromPath(path):
@@ -62,6 +65,11 @@ def removeLineFile(file_path, nLine):
             if (i != nLine):
                 file.write(line)
             i += 1
+
+
+def extractByLocation(source_layer, destination_layer, output_path):
+    parameters = {'INPUT' : source_layer.vector, 'PREDICATE' : 6, 'INTERSECT' : destination_layer.vector, 'OUTPUT' : output_path}
+    processing.run("qgis:extractbylocation", parameters)
 
 
 def getDestBySource(source_layer, destination_layer, source_value, source_field, destination_field, buffer_distance):
@@ -135,3 +143,56 @@ def createLayerStyleByCSV(csv_path):
     statementDestination_layer.setVisibility(True)
 
     return statementSource_layer, statementDestination_layer
+
+
+def mergeLayers(layers, output_path):
+    parameters = {'LAYERS': layers, 'CRS': 'EPSG:4326', 'OUTPUT': output_path}
+    processing.run("native:mergevectorlayers", parameters) 
+
+
+def difference(source_layer, destination_layer, output_path):
+    parameters = {"INPUT" : source_layer.vector, "OVERLAY" : destination_layer.vector, "OUTPUT" : output_path}
+    processing.run("qgis:difference", parameters)
+
+
+def clip(source_layer, destination_layer, output_path):
+    parameters = {"INPUT" : source_layer.vector, "OVERLAY" : destination_layer.vector, "OUTPUT" : output_path}
+    processing.run("qgis:clip", parameters)
+
+
+def intersect(source_layer, destination_layer, precision, output_path):
+    clip(source_layer, destination_layer, output_path)
+    clip_layer = QgsLayer(output_path, "")
+
+    clip_layer.addLengthFeat()
+
+    source_layer_path = "C:\\temp\\diagwayProjectionTmpLayer\\{}.shp".format(source_layer.name)
+    source_layer.export(source_layer_path)
+    ref_layer = QgsLayer(source_layer_path, "")
+    ref_layer.addLengthFeat()
+
+    ids = []
+    clip_layer_length = clip_layer.getAllFeatures("Length")
+    ref_layer_length = ref_layer.getAllFeatures("Length")
+
+    for i in range(len(clip_layer_length)):
+        if (clip_layer_length[i]/ref_layer_length[i] >= precision):
+            ids.append(i)
+
+    clip_layer_feats = clip_layer.getFeatures()
+
+    i = 0
+    selection = []
+    for feat in clip_layer_feats:
+        if (i in ids):
+            selection.append(feat)
+        i += 1
+
+    clip_layer.vector.selectByIds([s.id() for s in selection])
+
+    writer = QgsVectorFileWriter.writeAsVectorFormat(clip_layer.vector, "C:\\temp\\diagwayProjectionTmpLayer\\{}_extract.shp".format(clip_layer.name), "utf-8", clip_layer.vector.sourceCrs(), "ESRI Shapefile", onlySelected=True)
+    del(writer)
+
+    return QgsLayer(output_path, "{}_{}".format(source_layer.name, destination_layer.name))
+
+
