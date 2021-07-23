@@ -24,7 +24,7 @@
 from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, Qt
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction, QFileDialog, QProgressBar, QPushButton
-from qgis.core import QgsMapLayerProxyModel
+from qgis.core import QgsMapLayerProxyModel, QgsMessageLog, Qgis
 
 # Initialize Qt resources from file resources.py
 from .resources import *
@@ -34,6 +34,7 @@ from .DiagwayProjection_dockwidget import DiagwayProjectionDockWidget
 from .Layer import QgsLayer
 from .Worker import Worker
 from .Tools import *
+import os.path
 
 
 class DiagwayProjection(QtCore.QObject):
@@ -530,7 +531,9 @@ class DiagwayProjection(QtCore.QObject):
         source_layer, destination_layer, csv_path = self.getSourceDestFile()
         source_field = self.dockwidget.source_label_field.text()[:-2]
         destination_field = self.dockwidget.destination_label_field.text()[:-2]
-        worker = Worker(source_layer, destination_layer, csv_path, source_field, destination_field)
+        buffer_distance = int(self.dockwidget.buffer_lineEdit_distance.text())
+        precision = float(self.dockwidget.precision_lineEdit.text())/100
+        worker = Worker(source_layer, destination_layer, csv_path, source_field, destination_field, buffer_distance, precision)
 
         # configure the QgsMessageBar
         messageBar = self.iface.messageBar().createMessage('Running...', )
@@ -572,7 +575,7 @@ class DiagwayProjection(QtCore.QObject):
             self.iface.messageBar().pushMessage("Error", "Something went wrong... Check out the logs message for further informations", level=4, duration=4)
 
     def algoError(self, e, exception_string):
-        QgsMessageLog.logMessage('Worker thread raised an exception:\n'.format(exception_string), level=Qgis.Critical)
+        QgsMessageLog.logMessage('Worker thread raised an exception: {} -- {}'.format(exception_string, e), level=Qgis.Critical)
     #--------------------------------------------------------------------------
 
     """Run"""
@@ -632,16 +635,14 @@ class DiagwayProjection(QtCore.QObject):
                 self.dockwidget.push_fullauto.clicked.connect(self.startAlgo)
                 self.dockwidget.push_switch.clicked.connect(self.switch)
 
-                #Connect textEdit
-                self.dockwidget.source_lineEdit_fields.textChanged.connect(self.checkAutoButton)
-                self.dockwidget.source_lineEdit_fields.textChanged.connect(self.checkAddButton)
-                self.dockwidget.destination_lineEdit_fields.textChanged.connect(self.checkAddButton)
-                self.dockwidget.source_lineEdit_fields.editingFinished.connect(self.showField)
-
                 #Connect lineEdit
                 self.dockwidget.lineEdit_file_complete.textChanged.connect(self.filePreview)
                 self.dockwidget.buffer_lineEdit_distance.textChanged.connect(self.checkAutoButton)
                 self.dockwidget.buffer_lineEdit_distance.textChanged.connect(self.checkFullAutoButton)
+                self.dockwidget.source_lineEdit_fields.textChanged.connect(self.checkAutoButton)
+                self.dockwidget.source_lineEdit_fields.textChanged.connect(self.checkAddButton)
+                self.dockwidget.destination_lineEdit_fields.textChanged.connect(self.checkAddButton)
+                self.dockwidget.source_lineEdit_fields.editingFinished.connect(self.showField)
 
                 self.iface.mapCanvas().selectionChanged.connect(self.getSelectedEntity)
 

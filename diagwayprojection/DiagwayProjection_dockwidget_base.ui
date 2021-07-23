@@ -893,7 +893,7 @@
         <item>
          <layout class="QHBoxLayout" name="horizontalLayout_15">
           <item>
-           <widget class="QLabel" name="buffer_label_distance_2">
+           <widget class="QLabel" name="precision_label">
             <property name="font">
              <font>
               <pointsize>11</pointsize>
@@ -905,7 +905,7 @@
            </widget>
           </item>
           <item>
-           <widget class="QLineEdit" name="buffer_lineEdit_distance_2"/>
+           <widget class="QLineEdit" name="precision_lineEdit"/>
           </item>
          </layout>
         </item>

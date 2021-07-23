@@ -9,7 +9,7 @@ class Worker(QtCore.QObject):
     error = QtCore.pyqtSignal(Exception, str)
     progress = QtCore.pyqtSignal(float)
 
-    def __init__(self, source_layer, destination_layer, csv_path, source_field, destination_field, buffer_distance):
+    def __init__(self, source_layer, destination_layer, csv_path, source_field, destination_field, buffer_distance, precision):
         QtCore.QObject.__init__(self)
         self.source_layer = source_layer
         self.destination_layer = destination_layer
@@ -17,6 +17,7 @@ class Worker(QtCore.QObject):
         self.source_field = source_field
         self.destination_field = destination_field
         self.buffer_distance = buffer_distance
+        self.precision = precision
         self.killed = False
     #--------------------------------------------------------------------------
 
@@ -58,7 +59,7 @@ class Worker(QtCore.QObject):
                 else:
                     self.source_layer.filter("{} = {}".format(self.source_field, source_value))
 
-                destination_values = getDestBySource(self.source_layer, self.destination_layer, source_value, self.source_field, self.destination_field, self.buffer_distance)
+                destination_values = getDestBySource(self.source_layer, self.destination_layer, source_value, self.source_field, self.destination_field, self.buffer_distance, self.precision)
 
                 if (len(destination_values) > 0):
                     line = ""

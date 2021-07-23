@@ -1,10 +1,10 @@
-#from qgis import processing
-#from qgis.core import QgsVectorFileWriter, QgsWkbTypes
-#from os import mkdir
-#import os.path
-#import shutil
-#
-#from .Layer import QgsLayer
+from qgis import processing
+from qgis.core import QgsVectorFileWriter, QgsWkbTypes
+from os import mkdir
+import shutil
+from random import random
+
+from .Layer import QgsLayer
 
 def supprDouble(list):
     resList = []
@@ -72,7 +72,7 @@ def extractByLocation(source_layer, destination_layer, output_path):
     processing.run("qgis:extractbylocation", parameters)
 
 
-def getDestBySource(source_layer, destination_layer, source_value, source_field, destination_field, buffer_distance):
+def getDestBySource(source_layer, destination_layer, source_value, source_field, destination_field, buffer_distance, precision):
     #Create folder in temp
     dir_path = "C:/temp/diagwayProjectionTmpLayer"
     createDir(dir_path)
@@ -105,17 +105,21 @@ def getDestBySource(source_layer, destination_layer, source_value, source_field,
         #Dissolve
         processing.run('qgis:dissolve', {'INPUT' : buffer_path, 'FIELD' : "stc_route_sta_id", 'OUTPUT' : dissolve_path})
         #Spatial extract
-        processing.run("qgis:extractbylocation", {'INPUT' : destination_layer.vector, 'PREDICATE' : 6, 'INTERSECT' : dissolve_path, 'OUTPUT' : extract_path})
+        intersect(destination_layer, QgsLayer(dissolve_path, ""), precision, extract_path)
     else:
         #Spatial extract
-        processing.run("qgis:extractbylocation", {'INPUT' : destination_layer.vector, 'PREDICATE' : 6, 'INTERSECT' : buffer_path, 'OUTPUT' : extract_path})
+        intersect(destination_layer, QgsLayer(buffer_path, ""), precision, extract_path)
 
     #Get destinations
     res_layer = QgsLayer(extract_path, "res")
     res_layer_feats = res_layer.getFeatures()
     destination_values = []
     for feat in res_layer_feats:
-        destination_values.append(feat[destination_field])
+        try:
+            destination_values.append(feat[destination_field])
+        except KeyError:
+            destination_values.append(feat[destination_field[:-2]])
+
 
     return destination_values
         
@@ -166,11 +170,13 @@ def extractByLocationIntersect(source_layer, destination_layer, output_path):
 
 
 def intersect(source_layer, destination_layer, precision, output_path):
-    clip_path = "C:\\temp\\diagwayProjectionTmpLayer\\{}_clip.shp".format(source_layer.name)
+    alea = int((random()*100/random()*100)*1000)
+
+    clip_path = "C:\\temp\\diagwayProjectionTmpLayer\\{}_clip_{}.shp".format(source_layer.name, alea)
     clip(source_layer, destination_layer, clip_path)
     clip_layer = QgsLayer(clip_path, "clip_layer")
 
-    extract_path = "C:\\temp\\diagwayProjectionTmpLayer\\{}_extract.shp".format(source_layer.name)
+    extract_path = "C:\\temp\\diagwayProjectionTmpLayer\\{}_extract_{}.shp".format(source_layer.name, alea)
     extractByLocationIntersect(source_layer, destination_layer, extract_path)
     extract_layer = QgsLayer(extract_path, "extract_layer")
 
@@ -190,7 +196,6 @@ def intersect(source_layer, destination_layer, precision, output_path):
 
     i = 0
     selection = []
-    print(ids)
     for feat in extract_layer_feats:
         if (i in ids):
             selection.append(feat)
