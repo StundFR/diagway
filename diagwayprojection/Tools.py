@@ -140,13 +140,11 @@ def createLayerStyleByCSV(csv_path):
     csv_layer.refresh()
 
     statementSource_layer = QgsLayer.findLayerByName("Statement_source")
-    statementDestination_layer = QgsLayer.findLayerByName("Statement_destination")
 
-    QgsLayer.styleByCSV(statementSource_layer, statementDestination_layer, csv_path)
+    QgsLayer.styleByCSV(statementSource_layer, csv_path)
     statementSource_layer.setVisibility(True)
-    statementDestination_layer.setVisibility(True)
 
-    return statementSource_layer, statementDestination_layer
+    return statementSource_layer
 
 
 def mergeLayers(layers, output_path):
@@ -182,7 +180,6 @@ def intersect(source_layer, destination_layer, precision, output_path):
 
     clip_layer.addLengthFeat()
     extract_layer.addLengthFeat()
-    extract_layer.add()
 
     ids = []
     clip_layer_length = clip_layer.getAllFeatures("Length")

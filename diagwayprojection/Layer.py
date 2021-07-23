@@ -169,39 +169,37 @@ class QgsLayer:
             project.removeMapLayers([l.id()])
 
     @classmethod
-    def styleByCSV(cls, source_layer, destination_layer, csv_path):
+    def styleByCSV(cls, source_layer, csv_path):
         csv_layer = QgsLayer(csv_path, "")
         fields_list = csv_layer.getFields()
         csv_feats = csv_layer.getFeatures()
+        color = ("green", "red")
 
-        layers_list = [source_layer, destination_layer]
-        layers_list_length = len(layers_list)
 
-        for i in range(layers_list_length):
-            feats = []
-            for feat in csv_feats:
-                if (type(feat[fields_list[i]]) is str):
-                    split = feat[fields_list[i]].split(";")
-                    for elem in split:
-                        feats.append(elem)
+        feats = []
+        for feat in csv_feats:
+            if (type(feat[fields_list[0]]) is str):
+                split = feat[fields_list[0]].split(";")
+                for elem in split:
+                    feats.append(elem)
 
-            field_type = layers_list[i].typeOfField(fields_list[i])
+        field_type = source_layer.typeOfField(fields_list[0])
 
-            txt = ""
-            if (field_type is str):
-                for feat in feats:
-                    txt += "'{}',".format(feat)
-            else:
-                for feat in feats:
-                    txt += "{},".format(feat)
-            txt = txt[:-1]
+        txt = ""
+        if (field_type is str):
+            for feat in feats:
+                txt += "'{}',".format(feat)
+        else:
+            for feat in feats:
+                txt += "{},".format(feat)
+        txt = txt[:-1]
             
-            expression = "\"{}\" in ({})".format(fields_list[i], txt)
+        expression = "\"{}\" in ({})".format(fields_list[0], txt)
 
-            rules = (
-                ("Road done", expression, "green"),
-                ("Road not done", "ELSE", "red")
-            )
+        rules = (
+            ("Done", expression, color[0]),
+            ("Not done", "ELSE", color[1])
+        )
 
-            layers_list[i].styleByRules(rules)
-            csv_feats = csv_layer.getFeatures()
+        source_layer.styleByRules(rules)
+        csv_feats = csv_layer.getFeatures()

@@ -75,7 +75,7 @@ class Worker(QtCore.QObject):
             self.source_layer.setVisibility(False)
             self.destination_layer.setVisibility(False)
 
-            statementSource_layer, statementDestination_layer = createLayerStyleByCSV(self.csv_path)
+            statementSource_layer = createLayerStyleByCSV(self.csv_path)
 
             #Clear filter 
             self.source_layer.filter("")

@@ -1149,17 +1149,26 @@
   <tabstop>destination_comboBox_fields</tabstop>
   <tabstop>push_file</tabstop>
   <tabstop>push_next</tabstop>
+  <tabstop>push_cancel_create</tabstop>
   <tabstop>source_comboBox_layers_complete</tabstop>
   <tabstop>destination_comboBox_layers_complete</tabstop>
   <tabstop>push_file_complete</tabstop>
   <tabstop>push_next_complete</tabstop>
+  <tabstop>push_cancel_complete</tabstop>
+  <tabstop>source_lineEdit_fields</tabstop>
+  <tabstop>buffer_lineEdit_distance</tabstop>
+  <tabstop>precision_lineEdit</tabstop>
   <tabstop>push_auto</tabstop>
+  <tabstop>push_fullauto</tabstop>
+  <tabstop>push_switch</tabstop>
+  <tabstop>destination_lineEdit_fields</tabstop>
   <tabstop>push_add</tabstop>
+  <tabstop>push_cancel_3</tabstop>
+  <tabstop>lineEdit_file</tabstop>
+  <tabstop>radio_w</tabstop>
   <tabstop>lineEdit_file_complete</tabstop>
   <tabstop>textEdit_preview</tabstop>
   <tabstop>radio_a</tabstop>
-  <tabstop>radio_w</tabstop>
-  <tabstop>lineEdit_file</tabstop>
  </tabstops>
  <resources/>
  <connections>

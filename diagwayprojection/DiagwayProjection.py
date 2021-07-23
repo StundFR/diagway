@@ -296,30 +296,27 @@ class DiagwayProjection(QtCore.QObject):
         self.iface.addVectorLayer(csv_path, "", "ogr")
 
         sourceStatement_layer = source_layer.clone()
-        destinationStatement_layer = destination_layer.clone()
 
         sourceStatement_layer.setName("Statement_source")
-        destinationStatement_layer.setName("Statement_destination")
 
         QgsLayer.removeLayersByName("Statement_source")
-        QgsLayer.removeLayersByName("Statement_destination")
 
         sourceStatement_layer.add()
-        destinationStatement_layer.add()
 
         source_layer.setVisibility(False)
         destination_layer.setVisibility(False)
 
-        QgsLayer.styleByCSV(sourceStatement_layer, destinationStatement_layer, csv_path)
-        source_layer.zoom(self)
+        QgsLayer.styleByCSV(sourceStatement_layer, csv_path)
             
 
     def checkAutoButton(self):
         txt = self.dockwidget.source_lineEdit_fields.text()
         buffer_distance = self.dockwidget.buffer_lineEdit_distance.text()
+        precision = self.dockwidget.precision_lineEdit.text()
 
         try:
             buffer_distance = int(buffer_distance)
+            precision = int(precision)
         except ValueError:
             self.dockwidget.push_auto.setEnabled(False)
             print("Value have to be an integer")
@@ -332,9 +329,11 @@ class DiagwayProjection(QtCore.QObject):
 
     def checkFullAutoButton(self):
         buffer_distance = self.dockwidget.buffer_lineEdit_distance.text()
+        precision = self.dockwidget.precision_lineEdit.text()
 
         try:
             buffer_distance = int(buffer_distance)
+            precision = int(precision)
         except ValueError:
             self.dockwidget.push_fullauto.setEnabled(False)
             print("Value have to be an integer")
@@ -391,8 +390,8 @@ class DiagwayProjection(QtCore.QObject):
 
         source_layer.setVisibility(False)
         destination_layer.setVisibility(False)
-        statementSource_layer, statementDestination_layer = createLayerStyleByCSV(csv_path)
-        statementSource_layer.zoom(self)
+        createLayerStyleByCSV(csv_path)
+        self.iface.mapCanvas().refreshAllLayers() 
 
 
     def getAutoDestinationFields(self):
@@ -404,8 +403,9 @@ class DiagwayProjection(QtCore.QObject):
 
         source_value = self.dockwidget.source_lineEdit_fields.text()
         buffer_distance = int(self.dockwidget.buffer_lineEdit_distance.text())
+        precision = float(self.dockwidget.precision_lineEdit.text())/100
 
-        destination_values = getDestBySource(source_layer, destination_layer, source_value, source_field, destination_field, buffer_distance)
+        destination_values = getDestBySource(source_layer, destination_layer, source_value, source_field, destination_field, buffer_distance, precision)
 
         if (len(destination_values) == 0):
             isEmpty = True
@@ -428,7 +428,7 @@ class DiagwayProjection(QtCore.QObject):
         #Change style
         destination_rules = (
             ("Destinations", destination_expression, "blue"),
-            ("Other", "ELSE", "brown")
+            ("Other", "ELSE", "darkBrown")
         )
         source_rules = (
             ("source", source_expression, "magenta"),
@@ -444,9 +444,7 @@ class DiagwayProjection(QtCore.QObject):
 
         #Hide statement
         statementSource_layer = QgsLayer.findLayerByName("Statement_source")
-        statementDestination_layer = QgsLayer.findLayerByName("Statement_destination")
         statementSource_layer.setVisibility(False)
-        statementDestination_layer.setVisibility(False)
 
         source_layer.setVisibility(True)
         destination_layer.setVisibility(True)
@@ -469,10 +467,8 @@ class DiagwayProjection(QtCore.QObject):
     def switch(self):
         source_layer, destination_layer, csv_path = self.getSourceDestFile()
         statementSource_layer = QgsLayer.findLayerByName("Statement_source")
-        statementDestination_layer = QgsLayer.findLayerByName("Statement_destination")
 
         layers = [source_layer, destination_layer] 
-        statements = [statementSource_layer, statementDestination_layer]
 
         if (source_layer.isVisible()):
             visibility = False
@@ -482,10 +478,9 @@ class DiagwayProjection(QtCore.QObject):
         for l in layers:
             l.setVisibility(visibility)
 
-        for l in statements:
-            l.setVisibility(not visibility)
-    
-
+        statementSource_layer.setVisibility(not visibility)
+        
+        
     def showField(self):
         destination_textEdit = self.dockwidget.destination_lineEdit_fields
         source_field = self.dockwidget.source_label_field.text()[:-2]
@@ -507,10 +502,8 @@ class DiagwayProjection(QtCore.QObject):
                 destination_expression = "\"{}\" in ('{}')".format(destination_field, destination_field_value.replace(";", "','"))
 
                 source_statement = QgsLayer.findLayerByName("Statement_source")
-                dest_statement = QgsLayer.findLayerByName("Statement_destination")
 
                 source_statement.setVisibility(False)
-                dest_statement.setVisibility(False)
                 source_layer.setVisibility(True)
                 destination_layer.setVisibility(True)
 
@@ -638,8 +631,10 @@ class DiagwayProjection(QtCore.QObject):
                 #Connect lineEdit
                 self.dockwidget.lineEdit_file_complete.textChanged.connect(self.filePreview)
                 self.dockwidget.buffer_lineEdit_distance.textChanged.connect(self.checkAutoButton)
-                self.dockwidget.buffer_lineEdit_distance.textChanged.connect(self.checkFullAutoButton)
                 self.dockwidget.source_lineEdit_fields.textChanged.connect(self.checkAutoButton)
+                self.dockwidget.precision_lineEdit.textChanged.connect(self.checkAutoButton)
+                self.dockwidget.buffer_lineEdit_distance.textChanged.connect(self.checkFullAutoButton)
+                self.dockwidget.precision_lineEdit.textChanged.connect(self.checkFullAutoButton)
                 self.dockwidget.source_lineEdit_fields.textChanged.connect(self.checkAddButton)
                 self.dockwidget.destination_lineEdit_fields.textChanged.connect(self.checkAddButton)
                 self.dockwidget.source_lineEdit_fields.editingFinished.connect(self.showField)
