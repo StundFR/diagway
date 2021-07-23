@@ -1,10 +1,10 @@
-from qgis import processing
-from qgis.core import QgsVectorFileWriter, QgsWkbTypes
-from os import mkdir
-import os.path
-import shutil
-
-from .Layer import QgsLayer
+#from qgis import processing
+#from qgis.core import QgsVectorFileWriter, QgsWkbTypes
+#from os import mkdir
+#import os.path
+#import shutil
+#
+#from .Layer import QgsLayer
 
 def supprDouble(list):
     resList = []
@@ -160,39 +160,47 @@ def clip(source_layer, destination_layer, output_path):
     processing.run("qgis:clip", parameters)
 
 
+def extractByLocationIntersect(source_layer, destination_layer, output_path):
+    parameters = {'INPUT' : source_layer.vector, 'PREDICATE' : 0, 'INTERSECT' : destination_layer.vector, 'OUTPUT' : output_path}
+    processing.run("qgis:extractbylocation", parameters)
+
+
 def intersect(source_layer, destination_layer, precision, output_path):
-    clip(source_layer, destination_layer, output_path)
-    clip_layer = QgsLayer(output_path, "")
+    clip_path = "C:\\temp\\diagwayProjectionTmpLayer\\{}_clip.shp".format(source_layer.name)
+    clip(source_layer, destination_layer, clip_path)
+    clip_layer = QgsLayer(clip_path, "clip_layer")
+
+    extract_path = "C:\\temp\\diagwayProjectionTmpLayer\\{}_extract.shp".format(source_layer.name)
+    extractByLocationIntersect(source_layer, destination_layer, extract_path)
+    extract_layer = QgsLayer(extract_path, "extract_layer")
 
     clip_layer.addLengthFeat()
-
-    source_layer_path = "C:\\temp\\diagwayProjectionTmpLayer\\{}.shp".format(source_layer.name)
-    source_layer.export(source_layer_path)
-    ref_layer = QgsLayer(source_layer_path, "")
-    ref_layer.addLengthFeat()
+    extract_layer.addLengthFeat()
+    extract_layer.add()
 
     ids = []
     clip_layer_length = clip_layer.getAllFeatures("Length")
-    ref_layer_length = ref_layer.getAllFeatures("Length")
+    extract_layer_length = extract_layer.getAllFeatures("Length")
 
     for i in range(len(clip_layer_length)):
-        if (clip_layer_length[i]/ref_layer_length[i] >= precision):
+        if (clip_layer_length[i]/extract_layer_length[i] >= precision):
             ids.append(i)
 
-    clip_layer_feats = clip_layer.getFeatures()
+    extract_layer_feats = extract_layer.getFeatures()
 
     i = 0
     selection = []
-    for feat in clip_layer_feats:
+    print(ids)
+    for feat in extract_layer_feats:
         if (i in ids):
             selection.append(feat)
         i += 1
 
-    clip_layer.vector.selectByIds([s.id() for s in selection])
+    extract_layer.vector.selectByIds([s.id() for s in selection])
 
-    writer = QgsVectorFileWriter.writeAsVectorFormat(clip_layer.vector, "C:\\temp\\diagwayProjectionTmpLayer\\{}_extract.shp".format(clip_layer.name), "utf-8", clip_layer.vector.sourceCrs(), "ESRI Shapefile", onlySelected=True)
+    writer = QgsVectorFileWriter.writeAsVectorFormat(extract_layer.vector, output_path, "utf-8", extract_layer.vector.sourceCrs(), "ESRI Shapefile", onlySelected=True)
     del(writer)
 
-    return QgsLayer(output_path, "{}_{}".format(source_layer.name, destination_layer.name))
+    return QgsLayer(output_path, "{}_intersect_{}".format(source_layer.name, destination_layer.name))
 
 
