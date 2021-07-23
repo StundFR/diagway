@@ -891,6 +891,25 @@
          </layout>
         </item>
         <item>
+         <layout class="QHBoxLayout" name="horizontalLayout_15">
+          <item>
+           <widget class="QLabel" name="buffer_label_distance_2">
+            <property name="font">
+             <font>
+              <pointsize>11</pointsize>
+             </font>
+            </property>
+            <property name="text">
+             <string>Precision (%)</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLineEdit" name="buffer_lineEdit_distance_2"/>
+          </item>
+         </layout>
+        </item>
+        <item>
          <widget class="QPushButton" name="push_auto">
           <property name="enabled">
            <bool>false</bool>
@@ -1097,8 +1116,6 @@
         </item>
        </layout>
        <zorder>push_auto</zorder>
-       <zorder>source_label_field</zorder>
-       <zorder>destination_label_field</zorder>
        <zorder>push_add</zorder>
        <zorder>push_cancel_3</zorder>
        <zorder>push_fullauto</zorder>
@@ -1106,16 +1123,10 @@
        <zorder>push_switch</zorder>
        <zorder>source_lineEdit_fields</zorder>
        <zorder>destination_lineEdit_fields</zorder>
-       <zorder>horizontalSpacer</zorder>
-       <zorder>horizontalSpacer_2</zorder>
-       <zorder>horizontalSpacer_3</zorder>
-       <zorder>horizontalSpacer_4</zorder>
-       <zorder>destination_label_field_2</zorder>
-       <zorder>horizontalSpacer_5</zorder>
-       <zorder>horizontalSpacer_6</zorder>
        <zorder>verticalSpacer_2</zorder>
        <zorder>verticalSpacer_6</zorder>
        <zorder>verticalSpacer_7</zorder>
+       <zorder>layoutWidget</zorder>
       </widget>
      </widget>
     </item>
