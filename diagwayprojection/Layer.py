@@ -1,10 +1,11 @@
 from qgis.core import QgsVectorLayer, QgsVectorFileWriter, QgsWkbTypes, QgsProject, QgsRuleBasedRenderer, QgsSymbol, QgsVectorDataProvider, QgsField
 from qgis.PyQt.QtGui import QColor
+from qgis import processing
 from PyQt5.QtCore import *
 
 class QgsLayer:
     """Constructor"""
-    def __init__(self, path=None, name=None, vectorLayer=None) -> None:
+    def __init__(self, path=None, name=None, vectorLayer=None):
         if (vectorLayer is None):
             self.path = path
             self.name = name

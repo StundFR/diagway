@@ -1,5 +1,5 @@
 from qgis import processing
-from qgis.core import QgsVectorFileWriter, QgsWkbTypes
+from qgis.core import QgsVectorFileWriter
 from os import mkdir
 import shutil
 from random import random
@@ -168,7 +168,7 @@ def extractByLocationIntersect(source_layer, destination_layer, output_path):
 
 
 def intersect(source_layer, destination_layer, precision, output_path):
-    alea = int((random()*100/random()*100)*1000)
+    alea = int(random()*100/random())
 
     clip_path = "C:\\temp\\diagwayProjectionTmpLayer\\{}_clip_{}.shp".format(source_layer.name, alea)
     clip(source_layer, destination_layer, clip_path)
