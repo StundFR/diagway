@@ -1,6 +1,7 @@
 from qgis import processing
+from qgis.core import QgsVectorFileWriter
 from os import mkdir
-import os.path
+from random import random
 import shutil
 
 from .Layer import QgsLayer
@@ -14,15 +15,17 @@ def supprDouble(list):
 
 
 def createDir(dir_path):
-    if os.path.exists(dir_path):
-        try:
-            shutil.rmtree(dir_path)
-        except OSError as e:
-            print("Error: %s - %s." % (e.filename, e.strerror))
     try:
         mkdir(dir_path)
     except FileExistsError:
         print("Directory already exists")
+
+
+def removeDir(dir_path):
+    try:
+        shutil.rmtree(dir_path)
+    except OSError as e:
+        print("Error: %s - %s." % (e.filename, e.strerror))
 
 
 def getNameFromPath(path):
@@ -71,14 +74,14 @@ def extractByLocation(source_layer, destination_layer, output_path):
 
 def getDestBySource(source_layer, destination_layer, source_value, source_field, destination_field, buffer_distance):
     #Create folder in temp
-    dir_path = "C:/temp/diagwayProjectionTmpLayer"
+    dir_path = "C:/temp/SupressionRouteTmpLayer"
     createDir(dir_path)
 
     source = str(source_value)
     source = source.replace("/", "")
-    buffer_path = "C:/temp/diagwayProjectionTmpLayer/routeBuffer_" + source + ".shp"
-    extract_path = "C:/temp/diagwayProjectionTmpLayer/routeExtract_" + source +".shp"
-    dissolve_path = "C:/temp/diagwayProjectionTmpLayer/routeDissolve_" + source +".shp"
+    buffer_path = "C:/temp/SupressionRouteTmpLayer/routeBuffer_" + source + ".shp"
+    extract_path = "C:/temp/SupressionRouteTmpLayer/routeExtract_" + source +".shp"
+    dissolve_path = "C:/temp/SupressionRouteTmpLayer/routeDissolve_" + source +".shp"
 
     if (type(source_value) is str):
         expression = "\"{}\" = '{}'".format(source_field, source_value)
@@ -155,32 +158,65 @@ def getAllFeatures(layer, field):
     return feats
 
 
-def difference(source_layer, destination_layer):
-    extract_feats = []
-    source_feats = source_layer.getFeatures()
-    destination_feat = destination_layer.getFeatures()
-    fields = source_layer.getFields()
+def difference(source_layer, destination_layer, output_path):
+    parameters = {"INPUT" : source_layer, "OVERLAY" : destination_layer, "OUTPUT" : output_path}
+    processing.run("qgis:difference", parameters)
 
-    source_values = []
-    for source_feat in source_feats:
-        for field in fields:
-            source_values.append(source_feat[field])
 
-        fields = source_layer.getFields()
-        
-        for dest_feat in destination_feat:
-            dest_values = []
-            for field in fields:
-                dest_values.append(dest_feat[field])
+def clip(source_layer, destination_layer, output_path):
+    parameters = {"INPUT" : source_layer.vector, "OVERLAY" : destination_layer.vector, "OUTPUT" : output_path}
+    processing.run("qgis:clip", parameters)
 
-            fields = source_layer.getFields()
 
-            if (source_values != dest_values):
-                extract_feats.append(source_feat)
+def extractByLocationIntersect(source_layer, destination_layer, output_path):
+    parameters = {'INPUT' : source_layer.vector, 'PREDICATE' : 0, 'INTERSECT' : destination_layer.vector, 'OUTPUT' : output_path}
+    processing.run("qgis:extractbylocation", parameters)
 
-        destination_feat = destination_layer.getFeatures()
 
-    return extract_feats
+def intersect(source_layer, destination_layer, precision, output_path):
+    alea = int(random()*1000/random())
+    print(alea)
+
+    print("début clip")
+    clip_path = "C:\\temp\\SupressionRouteTmpLayer\\{}_clip_{}.shp".format(source_layer.name, alea)
+    clip(source_layer, destination_layer, clip_path)
+    clip_layer = QgsLayer(clip_path, "clip_layer")
+
+    extract_path = "C:\\temp\\SupressionRouteTmpLayer\\{}_extract_{}.shp".format(source_layer.name, alea)
+    print("début de l'extract")
+    extractByLocationIntersect(source_layer, destination_layer, extract_path)
+    extract_layer = QgsLayer(extract_path, "extract_layer")
+
+    print("ajout des longueur")
+    clip_layer.addLengthFeat()
+    extract_layer.addLengthFeat()
+
+    print("récupération des longueur")
+    ids = []
+    clip_layer_length = clip_layer.getAllFeatures("Length")
+    extract_layer_length = extract_layer.getAllFeatures("Length")
+
+    print("Calcul des précision")
+    for i in range(len(clip_layer_length)):
+        if (clip_layer_length[i]/extract_layer_length[i] >= precision):
+            ids.append(i)
+
+    extract_layer_feats = extract_layer.getFeatures()
+
+    print("Trie des attributs")
+    i = 0
+    selection = []
+    for feat in extract_layer_feats:
+        if (i in ids):
+            selection.append(feat)
+        i += 1
+
+    extract_layer.vector.selectByIds([s.id() for s in selection])
+
+    writer = QgsVectorFileWriter.writeAsVectorFormat(extract_layer.vector, output_path, "utf-8", extract_layer.vector.sourceCrs(), "ESRI Shapefile", onlySelected=True)
+    del(writer)
+
+    return QgsLayer(output_path, "{}_intersect_{}".format(source_layer.name, destination_layer.name))
 
 
 
