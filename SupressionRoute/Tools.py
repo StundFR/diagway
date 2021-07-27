@@ -1,8 +1,9 @@
 from qgis import processing
 from qgis.core import QgsVectorFileWriter
-from os import mkdir
+from os import mkdir, times
 from random import random
 import shutil
+import tempfile
 
 from .Layer import QgsLayer
 
@@ -74,14 +75,15 @@ def extractByLocation(source_layer, destination_layer, output_path):
 
 def getDestBySource(source_layer, destination_layer, source_value, source_field, destination_field, buffer_distance):
     #Create folder in temp
-    dir_path = "C:/temp/SupressionRouteTmpLayer"
+    temp_path = tempfile.gettempdir()
+    dir_path = temp_path + "/SupressionRouteTmpLayer"
     createDir(dir_path)
 
     source = str(source_value)
     source = source.replace("/", "")
-    buffer_path = "C:/temp/SupressionRouteTmpLayer/routeBuffer_" + source + ".shp"
-    extract_path = "C:/temp/SupressionRouteTmpLayer/routeExtract_" + source +".shp"
-    dissolve_path = "C:/temp/SupressionRouteTmpLayer/routeDissolve_" + source +".shp"
+    buffer_path = dir_path + "/routeBuffer_" + source + ".shp"
+    extract_path = dir_path + "/routeExtract_" + source +".shp"
+    dissolve_path = dir_path + "/routeDissolve_" + source +".shp"
 
     if (type(source_value) is str):
         expression = "\"{}\" = '{}'".format(source_field, source_value)
@@ -175,35 +177,31 @@ def extractByLocationIntersect(source_layer, destination_layer, output_path):
 
 def intersect(source_layer, destination_layer, precision, output_path):
     alea = int(random()*1000/random())
-    print(alea)
+    temp_path = tempfile.gettempdir()
+    dir_path = temp_path + "/SupressionRouteTmpLayer"
+    createDir(dir_path)
 
-    print("début clip")
-    clip_path = "C:\\temp\\SupressionRouteTmpLayer\\{}_clip_{}.shp".format(source_layer.name, alea)
+    clip_path = dir_path + "/{}_clip_{}.shp".format(source_layer.name, alea)
     clip(source_layer, destination_layer, clip_path)
     clip_layer = QgsLayer(clip_path, "clip_layer")
 
-    extract_path = "C:\\temp\\SupressionRouteTmpLayer\\{}_extract_{}.shp".format(source_layer.name, alea)
-    print("début de l'extract")
+    extract_path = dir_path + "/{}_extract_{}.shp".format(source_layer.name, alea)
     extractByLocationIntersect(source_layer, destination_layer, extract_path)
     extract_layer = QgsLayer(extract_path, "extract_layer")
 
-    print("ajout des longueur")
     clip_layer.addLengthFeat()
     extract_layer.addLengthFeat()
 
-    print("récupération des longueur")
     ids = []
     clip_layer_length = clip_layer.getAllFeatures("Length")
     extract_layer_length = extract_layer.getAllFeatures("Length")
 
-    print("Calcul des précision")
     for i in range(len(clip_layer_length)):
         if (clip_layer_length[i]/extract_layer_length[i] >= precision):
             ids.append(i)
 
     extract_layer_feats = extract_layer.getFeatures()
 
-    print("Trie des attributs")
     i = 0
     selection = []
     for feat in extract_layer_feats:
