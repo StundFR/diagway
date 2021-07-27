@@ -3,6 +3,7 @@ from qgis.core import QgsVectorFileWriter
 from os import mkdir
 import shutil
 from random import random
+import tempfile
 
 from .Layer import QgsLayer
 
@@ -74,14 +75,15 @@ def extractByLocation(source_layer, destination_layer, output_path):
 
 def getDestBySource(source_layer, destination_layer, source_value, source_field, destination_field, buffer_distance, precision):
     #Create folder in temp
-    dir_path = "C:/temp/diagwayProjectionTmpLayer"
+    temp_path = tempfile.gettempdir()
+    dir_path = temp_path + "/diagwayProjectionTmpLayer"
     createDir(dir_path)
 
     source = str(source_value)
     source = source.replace("/", "")
-    buffer_path = "C:/temp/diagwayProjectionTmpLayer/routeBuffer_" + source + ".shp"
-    extract_path = "C:/temp/diagwayProjectionTmpLayer/routeExtract_" + source +".shp"
-    dissolve_path = "C:/temp/diagwayProjectionTmpLayer/routeDissolve_" + source +".shp"
+    buffer_path = dir_path +"/routeBuffer_" + source + ".shp"
+    extract_path = dir_path +"/routeExtract_" + source +".shp"
+    dissolve_path = dir_path +"/routeDissolve_" + source +".shp"
 
     if (type(source_value) is str):
         expression = "\"{}\" = '{}'".format(source_field, source_value)
@@ -168,13 +170,16 @@ def extractByLocationIntersect(source_layer, destination_layer, output_path):
 
 
 def intersect(source_layer, destination_layer, precision, output_path):
+    temp_path = tempfile.gettempdir()
+    dir_path = temp_path + "/diagwayProjectionTmpLayer"
+    createDir(dir_path)
     alea = int(random()*100/random())
 
-    clip_path = "C:\\temp\\diagwayProjectionTmpLayer\\{}_clip_{}.shp".format(source_layer.name, alea)
+    clip_path = dir_path + "/{}_clip_{}.shp".format(source_layer.name, alea)
     clip(source_layer, destination_layer, clip_path)
     clip_layer = QgsLayer(clip_path, "clip_layer")
 
-    extract_path = "C:\\temp\\diagwayProjectionTmpLayer\\{}_extract_{}.shp".format(source_layer.name, alea)
+    extract_path = dir_path + "/{}_extract_{}.shp".format(source_layer.name, alea)
     extractByLocationIntersect(source_layer, destination_layer, extract_path)
     extract_layer = QgsLayer(extract_path, "extract_layer")
 

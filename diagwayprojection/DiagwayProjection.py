@@ -233,9 +233,10 @@ class DiagwayProjection(QtCore.QObject):
     def fillFields(self, comboBox):
         comboBox.clear()
         layer = self.dockwidget.sender().currentLayer()
-        fields = layer.fields()
-        for f in fields:
-            comboBox.addItem(f.name())
+        if layer is not None:
+            fields = layer.fields()
+            for f in fields:
+                comboBox.addItem(f.name())
 
     #Check if all box are correct
     def checkAll(self):
