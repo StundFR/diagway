@@ -2,6 +2,7 @@ from PyQt5 import QtCore
 from .Layer import QgsLayer
 from .Tools import *
 import traceback
+import tempfile
 
 class Worker(QtCore.QObject):
     """Constructor & Variables"""
@@ -40,6 +41,10 @@ class Worker(QtCore.QObject):
 
     #Create layer with all the road already recorded
     def getRoadsDone(self, destination_layer, output_path):
+        temp_path = tempfile.gettempdir()
+        dir_path = temp_path + "/SupressionRouteTmpLayer"
+        createDir(dir_path)
+
         source_layer = self.source_layer
         field = self.field
         extract = []
@@ -49,7 +54,7 @@ class Worker(QtCore.QObject):
         length = len(ids)
 
         if (not destination_layer.isLT93()):
-            destination_layer = destination_layer.projectionLT93("C:\\temp\\SupressionRouteTmpLayer\\{}_LT93.shp".format(destination_layer.name))
+            destination_layer = destination_layer.projectionLT93("{}/{}_LT93.shp".format(dir_path, destination_layer.name))
 
         progress_count = 0
         self.progress.emit(0)
@@ -59,8 +64,8 @@ class Worker(QtCore.QObject):
                 self.progress.emit(100)
                 return None
 
-            buffer_path = "C:\\temp\\SupressionRouteTmpLayer\\buffer_{}.shp".format(str(progress_count))
-            extract_path = "C:\\temp\\SupressionRouteTmpLayer\\extract_{}.shp".format(str(progress_count))
+            buffer_path = "{}\\buffer_{}.shp".format(dir_path, str(progress_count))
+            extract_path = "{}\\extract_{}.shp".format(dir_path, str(progress_count))
 
             destination_layer.filter("{} = {}".format(field, i))
 
@@ -79,15 +84,19 @@ class Worker(QtCore.QObject):
 
     #Create layer with all the road not recorded yet
     def getRoadsUndone(self, destination_layer, output_path):
+        temp_path = tempfile.gettempdir()
+        dir_path = temp_path + "/SupressionRouteTmpLayer"
+        createDir(dir_path)
+
         source_layer = self.source_layer
         self.progress.emit(0)
 
         if (self.killed):
             return
 
-        output_buffer = "C:\\temp\\SupressionRouteTmpLayer\\{}_buffer.shp".format(destination_layer.name)
+        output_buffer = "{}\\{}_buffer.shp".format(dir_path, destination_layer.name)
         if (not destination_layer.isLT93()):
-            destination_layer = destination_layer.projectionLT93("C:\\temp\\SupressionRouteTmpLayer\\{}_LT93.shp".format(destination_layer.name))
+            destination_layer = destination_layer.projectionLT93("{}\\{}_LT93.shp".format(dir_path, destination_layer.name))
         destination_layer = destination_layer.buffer(1, output_buffer)
 
         if (self.killed):
@@ -108,17 +117,18 @@ class Worker(QtCore.QObject):
     """Run"""
     def run(self):
         try:
-            dir_path = "C:\\temp\\SupressionRouteTmpLayer"
+            temp_path = tempfile.gettempdir()
+            dir_path = temp_path + "/SupressionRouteTmpLayer"
             createDir(dir_path)
 
-            output_path = "C:\\temp\\SupressionRouteTmpLayer\\merged.shp"
+            output_path = "{}\\merged.shp".format(dir_path)
             self.mergedSelectLayers(output_path)
 
             destination_layer = QgsLayer(output_path, "")
-            output_path = "C:\\temp\\SupressionRouteTmpLayer\\getRoadsDone.shp"
+            output_path = "{}\\getRoadsDone.shp".format(dir_path)
             destination_layer = self.getRoadsDone(destination_layer, output_path)
 
-            output_path = "C:\\temp\\SupressionRouteTmpLayer\\getRoadsUndone.shp"
+            output_path = "{}\\getRoadsUndone.shp".format(dir_path)
             layer = self.getRoadsUndone(destination_layer, output_path)
         except Exception as e:
             layer = None
