@@ -213,12 +213,12 @@ class DiagwayProjection(QtCore.QObject):
     def getSourceDestFile(self):
         if (self.dockwidget.radio_a.isChecked()):
             path_csv = self.dockwidget.lineEdit_file_complete.text()
-            layer_source = self.dockwidget.source_comboBox_layers_complete.currentLayer()
-            layer_dest = self.dockwidget.destination_comboBox_layers_complete.currentLayer()
+            layer_source = self.dockwidget.comboBox_layers_source_complete.currentLayer()
+            layer_dest = self.dockwidget.comboBox_layers_dest_complete.currentLayer()
         else:
             path_csv = self.dockwidget.lineEdit_file.text()
-            layer_source = self.dockwidget.source_comboBox_layers.currentLayer()
-            layer_dest = self.dockwidget.destination_comboBox_layers.currentLayer()
+            layer_source = self.dockwidget.comboBox_layers_source.currentLayer()
+            layer_dest = self.dockwidget.comboBox_layers_dest.currentLayer()
 
         layer_source = QgsLayer(vectorLayer=layer_source)
         layer_dest = QgsLayer(vectorLayer=layer_dest)
@@ -267,11 +267,11 @@ class DiagwayProjection(QtCore.QObject):
         layer_dest.filter("")
 
         if (self.dockwidget.radio_w.isChecked()):
-            field_source = self.dockwidget.source_comboBox_fields.currentText()
-            field_dest = self.dockwidget.destination_comboBox_fields.currentText()
+            field_source = self.dockwidget.comboBox_fields_source.currentText()
+            field_dest = self.dockwidget.comboBox_fields_dest.currentText()
 
-            self.dockwidget.source_label_field.setText(field_source + " :")
-            self.dockwidget.destination_label_field.setText(field_dest + " :")
+            self.dockwidget.label_field_source.setText(field_source + " :")
+            self.dockwidget.label_field_dest.setText(field_dest + " :")
 
             line = "{};{}\n".format(field_source, field_dest)
             with open(path_csv, "w") as csv:
@@ -285,8 +285,8 @@ class DiagwayProjection(QtCore.QObject):
             label_dest = header[1]
             label_dest = label_dest[:-1] + " :"
 
-            self.dockwidget.source_label_field.setText(label_source)
-            self.dockwidget.destination_label_field.setText(label_dest)
+            self.dockwidget.label_field_source.setText(label_source)
+            self.dockwidget.label_field_dest.setText(label_dest)
 
         name = getNameFromPath(path_csv)
         QgsLayer.removeLayersByName(name)
@@ -307,9 +307,9 @@ class DiagwayProjection(QtCore.QObject):
             
 
     def checkAutoButton(self):
-        txt = self.dockwidget.source_lineEdit_fields.text()
-        buffer_distance = self.dockwidget.buffer_lineEdit_distance.text()
-        precision = self.dockwidget.precision_lineEdit.text()
+        txt = self.dockwidget.lineEdit_fields_source.text()
+        buffer_distance = self.dockwidget.lineEdit_buffer_distance.text()
+        precision = self.dockwidget.lineEdit_precision.text()
 
         try:
             buffer_distance = int(buffer_distance)
@@ -325,8 +325,8 @@ class DiagwayProjection(QtCore.QObject):
 
 
     def checkFullAutoButton(self):
-        buffer_distance = self.dockwidget.buffer_lineEdit_distance.text()
-        precision = self.dockwidget.precision_lineEdit.text()
+        buffer_distance = self.dockwidget.lineEdit_buffer_distance.text()
+        precision = self.dockwidget.lineEdit_precision.text()
 
         try:
             buffer_distance = int(buffer_distance)
@@ -339,8 +339,8 @@ class DiagwayProjection(QtCore.QObject):
 
 
     def checkAddButton(self):
-        textEdit_source = self.dockwidget.source_lineEdit_fields.text()
-        textEdit_dest = self.dockwidget.destination_lineEdit_fields.text()
+        textEdit_source = self.dockwidget.lineEdit_fields_source.text()
+        textEdit_dest = self.dockwidget.lineEdit_fields_dest.text()
 
         if ((textEdit_dest == "") or (textEdit_source == "")):
             self.dockwidget.push_add.setEnabled(False)
@@ -355,13 +355,13 @@ class DiagwayProjection(QtCore.QObject):
         fields_dest = ""
 
         if (layer_source is not None):
-            label_source = self.dockwidget.source_label_field.text()[:-2]
+            label_source = self.dockwidget.label_field_source.text()[:-2]
             feats_source = layer_source.selectedFeatures()
             for f in feats_source:
                 fields_source += str(f[label_source]) + ";"
 
         if (layer_dest is not None):
-            label_dest = self.dockwidget.destination_label_field.text()[:-2]
+            label_dest = self.dockwidget.label_field_dest.text()[:-2]
             destination_feats = layer_dest.selectedFeatures()
             for f in destination_feats:
                 fields_dest += str(f[label_dest]) + ";"
@@ -370,20 +370,20 @@ class DiagwayProjection(QtCore.QObject):
         fields_dest = fields_dest[:-1]
 
         if (fields_source != ""):
-            self.dockwidget.source_lineEdit_fields.setText(fields_source)
-        self.dockwidget.destination_lineEdit_fields.setText(fields_dest)       
+            self.dockwidget.lineEdit_fields_source.setText(fields_source)
+        self.dockwidget.lineEdit_fields_dest.setText(fields_dest)       
 
 
     def addFields(self):
         layer_source, layer_dest, path_csv = self.getSourceDestFile()
 
-        text_source = self.dockwidget.source_lineEdit_fields.text()
-        text_dest = self.dockwidget.destination_lineEdit_fields.text()
+        text_source = self.dockwidget.lineEdit_fields_source.text()
+        text_dest = self.dockwidget.lineEdit_fields_dest.text()
 
         addLineCSV(path_csv, text_source, text_dest)
 
-        self.dockwidget.source_lineEdit_fields.setText("")
-        self.dockwidget.destination_lineEdit_fields.setText("")
+        self.dockwidget.lineEdit_fields_source.setText("")
+        self.dockwidget.lineEdit_fields_dest.setText("")
 
         layer_source.setVisibility(False)
         layer_dest.setVisibility(False)
@@ -395,12 +395,12 @@ class DiagwayProjection(QtCore.QObject):
         #Get data
         layer_source, layer_dest, path_csv = self.getSourceDestFile()
 
-        field_source = self.dockwidget.source_label_field.text()[:-2]
-        field_dest = self.dockwidget.destination_label_field.text()[:-2]
+        field_source = self.dockwidget.label_field_source.text()[:-2]
+        field_dest = self.dockwidget.label_field_dest.text()[:-2]
 
-        source_value = self.dockwidget.source_lineEdit_fields.text()
-        buffer_distance = int(self.dockwidget.buffer_lineEdit_distance.text())
-        precision = float(self.dockwidget.precision_lineEdit.text())/100
+        source_value = self.dockwidget.lineEdit_fields_source.text()
+        buffer_distance = int(self.dockwidget.lineEdit_buffer_distance.text())
+        precision = float(self.dockwidget.lineEdit_precision.text())/100
 
         dest_value = getDestBySource(layer_source, layer_dest, source_value, field_source, field_dest, buffer_distance, precision)
 
@@ -416,7 +416,7 @@ class DiagwayProjection(QtCore.QObject):
         line = line[:-1]
 
         #Write line
-        self.dockwidget.destination_lineEdit_fields.setText(line)
+        self.dockwidget.lineEdit_fields_dest.setText(line)
 
         #Filter
         expression_source = expressionFromFields(field_dest, line)
@@ -479,9 +479,9 @@ class DiagwayProjection(QtCore.QObject):
         
         
     def showField(self):
-        textEdit_dest = self.dockwidget.destination_lineEdit_fields
-        field_source = self.dockwidget.source_label_field.text()[:-2]
-        field_dest = self.dockwidget.destination_label_field.text()[:-2]
+        textEdit_dest = self.dockwidget.lineEdit_fields_dest
+        field_source = self.dockwidget.label_field_source.text()[:-2]
+        field_dest = self.dockwidget.label_field_dest.text()[:-2]
         field_source_value = self.sender().text()
         layer_source, layer_dest, path_csv = self.getSourceDestFile()
 
@@ -519,10 +519,10 @@ class DiagwayProjection(QtCore.QObject):
     """Full auto function"""
     def startAlgo(self):
         layer_source, layer_dest, path_csv = self.getSourceDestFile()
-        field_source = self.dockwidget.source_label_field.text()[:-2]
-        field_dest = self.dockwidget.destination_label_field.text()[:-2]
-        buffer_distance = int(self.dockwidget.buffer_lineEdit_distance.text())
-        precision = float(self.dockwidget.precision_lineEdit.text())/100
+        field_source = self.dockwidget.label_field_source.text()[:-2]
+        field_dest = self.dockwidget.label_field_dest.text()[:-2]
+        buffer_distance = int(self.dockwidget.lineEdit_buffer_distance.text())
+        precision = float(self.dockwidget.lineEdit_precision.text())/100
         worker = Worker(layer_source, layer_dest, path_csv, field_source, field_dest, buffer_distance, precision)
 
         # configure the QgsMessageBar
@@ -583,27 +583,27 @@ class DiagwayProjection(QtCore.QObject):
                 self.dockwidget = DiagwayProjectionDockWidget()
 
                 #Reset index layer
-                self.dockwidget.source_comboBox_layers.setCurrentIndex(-1)
-                self.dockwidget.destination_comboBox_layers.setCurrentIndex(-1)
-                self.dockwidget.source_comboBox_layers_complete.setCurrentIndex(-1)
-                self.dockwidget.destination_comboBox_layers_complete.setCurrentIndex(-1)
+                self.dockwidget.comboBox_layers_source.setCurrentIndex(-1)
+                self.dockwidget.comboBox_layers_dest.setCurrentIndex(-1)
+                self.dockwidget.comboBox_layers_source_complete.setCurrentIndex(-1)
+                self.dockwidget.comboBox_layers_dest_complete.setCurrentIndex(-1)
 
                 #Filter for vector layer
-                self.dockwidget.source_comboBox_layers.setFilters(QgsMapLayerProxyModel.VectorLayer)
-                self.dockwidget.destination_comboBox_layers.setFilters(QgsMapLayerProxyModel.VectorLayer)
-                self.dockwidget.source_comboBox_layers_complete.setFilters(QgsMapLayerProxyModel.VectorLayer)
-                self.dockwidget.destination_comboBox_layers_complete.setFilters(QgsMapLayerProxyModel.VectorLayer)
+                self.dockwidget.comboBox_layers_source.setFilters(QgsMapLayerProxyModel.VectorLayer)
+                self.dockwidget.comboBox_layers_dest.setFilters(QgsMapLayerProxyModel.VectorLayer)
+                self.dockwidget.comboBox_layers_source_complete.setFilters(QgsMapLayerProxyModel.VectorLayer)
+                self.dockwidget.comboBox_layers_dest_complete.setFilters(QgsMapLayerProxyModel.VectorLayer)
 
                 #Display fields of selected layers
-                self.dockwidget.source_comboBox_layers.layerChanged.connect(lambda : self.fillFields(self.dockwidget.source_comboBox_fields))
-                self.dockwidget.destination_comboBox_layers.layerChanged.connect(lambda : self.fillFields(self.dockwidget.destination_comboBox_fields))
+                self.dockwidget.comboBox_layers_source.layerChanged.connect(lambda : self.fillFields(self.dockwidget.comboBox_fields_source))
+                self.dockwidget.comboBox_layers_dest.layerChanged.connect(lambda : self.fillFields(self.dockwidget.comboBox_fields_dest))
 
                 #Check before go to next step
-                self.dockwidget.source_comboBox_layers.layerChanged.connect(self.checkAll)
-                self.dockwidget.destination_comboBox_layers.layerChanged.connect(self.checkAll)
+                self.dockwidget.comboBox_layers_source.layerChanged.connect(self.checkAll)
+                self.dockwidget.comboBox_layers_dest.layerChanged.connect(self.checkAll)
                 self.dockwidget.lineEdit_file.textChanged.connect(self.checkAll)
-                self.dockwidget.source_comboBox_layers_complete.layerChanged.connect(self.checkAll)
-                self.dockwidget.destination_comboBox_layers_complete.layerChanged.connect(self.checkAll)
+                self.dockwidget.comboBox_layers_source_complete.layerChanged.connect(self.checkAll)
+                self.dockwidget.comboBox_layers_dest_complete.layerChanged.connect(self.checkAll)
                 self.dockwidget.lineEdit_file_complete.textChanged.connect(self.checkAll)
 
                 #Connect buttons
@@ -627,14 +627,14 @@ class DiagwayProjection(QtCore.QObject):
 
                 #Connect lineEdit
                 self.dockwidget.lineEdit_file_complete.textChanged.connect(self.filePreview)
-                self.dockwidget.buffer_lineEdit_distance.textChanged.connect(self.checkAutoButton)
-                self.dockwidget.source_lineEdit_fields.textChanged.connect(self.checkAutoButton)
-                self.dockwidget.precision_lineEdit.textChanged.connect(self.checkAutoButton)
-                self.dockwidget.buffer_lineEdit_distance.textChanged.connect(self.checkFullAutoButton)
-                self.dockwidget.precision_lineEdit.textChanged.connect(self.checkFullAutoButton)
-                self.dockwidget.source_lineEdit_fields.textChanged.connect(self.checkAddButton)
-                self.dockwidget.destination_lineEdit_fields.textChanged.connect(self.checkAddButton)
-                self.dockwidget.source_lineEdit_fields.editingFinished.connect(self.showField)
+                self.dockwidget.lineEdit_buffer_distance.textChanged.connect(self.checkAutoButton)
+                self.dockwidget.lineEdit_fields_source.textChanged.connect(self.checkAutoButton)
+                self.dockwidget.lineEdit_precision.textChanged.connect(self.checkAutoButton)
+                self.dockwidget.lineEdit_buffer_distance.textChanged.connect(self.checkFullAutoButton)
+                self.dockwidget.lineEdit_precision.textChanged.connect(self.checkFullAutoButton)
+                self.dockwidget.lineEdit_fields_source.textChanged.connect(self.checkAddButton)
+                self.dockwidget.lineEdit_fields_dest.textChanged.connect(self.checkAddButton)
+                self.dockwidget.lineEdit_fields_source.editingFinished.connect(self.showField)
 
                 self.iface.mapCanvas().selectionChanged.connect(self.getSelectedEntity)
 

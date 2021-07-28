@@ -24,7 +24,7 @@
        </size>
       </property>
       <property name="currentIndex">
-       <number>1</number>
+       <number>3</number>
       </property>
       <widget class="QWidget" name="page_1">
        <layout class="QVBoxLayout" name="verticalLayout">
@@ -91,7 +91,7 @@
            </spacer>
           </item>
           <item alignment="Qt::AlignLeft|Qt::AlignBottom">
-           <widget class="QLabel" name="source_label_layer">
+           <widget class="QLabel" name="label_layer_source">
             <property name="maximumSize">
              <size>
               <width>120</width>
@@ -130,7 +130,7 @@
         <item>
          <layout class="QVBoxLayout" name="verticalLayout_2">
           <item>
-           <widget class="QgsMapLayerComboBox" name="source_comboBox_layers">
+           <widget class="QgsMapLayerComboBox" name="comboBox_layers_source">
             <property name="enabled">
              <bool>true</bool>
             </property>
@@ -145,7 +145,7 @@
            </widget>
           </item>
           <item>
-           <widget class="QComboBox" name="source_comboBox_fields">
+           <widget class="QComboBox" name="comboBox_fields_source">
             <property name="font">
              <font>
               <pointsize>11</pointsize>
@@ -199,7 +199,7 @@
            </spacer>
           </item>
           <item alignment="Qt::AlignLeft|Qt::AlignBottom">
-           <widget class="QLabel" name="destination_label_layer">
+           <widget class="QLabel" name="label_layer_dest">
             <property name="minimumSize">
              <size>
               <width>0</width>
@@ -244,7 +244,7 @@
         <item>
          <layout class="QVBoxLayout" name="verticalLayout_5">
           <item>
-           <widget class="QgsMapLayerComboBox" name="destination_comboBox_layers">
+           <widget class="QgsMapLayerComboBox" name="comboBox_layers_dest">
             <property name="font">
              <font>
               <pointsize>11</pointsize>
@@ -256,7 +256,7 @@
            </widget>
           </item>
           <item>
-           <widget class="QComboBox" name="destination_comboBox_fields">
+           <widget class="QComboBox" name="comboBox_fields_dest">
             <property name="font">
              <font>
               <pointsize>11</pointsize>
@@ -447,7 +447,7 @@
            </spacer>
           </item>
           <item alignment="Qt::AlignLeft|Qt::AlignBottom">
-           <widget class="QLabel" name="source_label_layers_complete">
+           <widget class="QLabel" name="label_layers_source_complete">
             <property name="font">
              <font>
               <pointsize>13</pointsize>
@@ -475,7 +475,7 @@
          </layout>
         </item>
         <item>
-         <widget class="QgsMapLayerComboBox" name="source_comboBox_layers_complete">
+         <widget class="QgsMapLayerComboBox" name="comboBox_layers_source_complete">
           <property name="font">
            <font>
             <pointsize>11</pointsize>
@@ -515,7 +515,7 @@
            </spacer>
           </item>
           <item>
-           <widget class="QLabel" name="destination_label_layers_complete">
+           <widget class="QLabel" name="label_layers_dest_complete">
             <property name="font">
              <font>
               <pointsize>13</pointsize>
@@ -543,7 +543,7 @@
          </layout>
         </item>
         <item>
-         <widget class="QgsMapLayerComboBox" name="destination_comboBox_layers_complete">
+         <widget class="QgsMapLayerComboBox" name="comboBox_layers_dest_complete">
           <property name="font">
            <font>
             <pointsize>11</pointsize>
@@ -785,7 +785,7 @@
            </spacer>
           </item>
           <item>
-           <widget class="QLabel" name="source_label_field">
+           <widget class="QLabel" name="label_field_source">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
               <horstretch>0</horstretch>
@@ -819,7 +819,7 @@
          </layout>
         </item>
         <item>
-         <widget class="QLineEdit" name="source_lineEdit_fields">
+         <widget class="QLineEdit" name="lineEdit_fields_source">
           <property name="font">
            <font>
             <pointsize>11</pointsize>
@@ -859,7 +859,7 @@
            </spacer>
           </item>
           <item>
-           <widget class="QLabel" name="destination_label_field_2">
+           <widget class="QLabel" name="label_parameters">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
               <horstretch>0</horstretch>
@@ -895,7 +895,7 @@
         <item>
          <layout class="QHBoxLayout" name="horizontalLayout_8">
           <item>
-           <widget class="QLabel" name="buffer_label_distance">
+           <widget class="QLabel" name="label_buffer_distance">
             <property name="font">
              <font>
               <pointsize>11</pointsize>
@@ -907,14 +907,14 @@
            </widget>
           </item>
           <item>
-           <widget class="QLineEdit" name="buffer_lineEdit_distance"/>
+           <widget class="QLineEdit" name="lineEdit_buffer_distance"/>
           </item>
          </layout>
         </item>
         <item>
          <layout class="QHBoxLayout" name="horizontalLayout_15">
           <item>
-           <widget class="QLabel" name="precision_label">
+           <widget class="QLabel" name="label_precision">
             <property name="font">
              <font>
               <pointsize>11</pointsize>
@@ -926,7 +926,7 @@
            </widget>
           </item>
           <item>
-           <widget class="QLineEdit" name="precision_lineEdit"/>
+           <widget class="QLineEdit" name="lineEdit_precision"/>
           </item>
          </layout>
         </item>
@@ -1007,7 +1007,7 @@
            </spacer>
           </item>
           <item>
-           <widget class="QLabel" name="destination_label_field">
+           <widget class="QLabel" name="label_field_dest">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
               <horstretch>0</horstretch>
@@ -1041,7 +1041,7 @@
          </layout>
         </item>
         <item>
-         <widget class="QLineEdit" name="destination_lineEdit_fields">
+         <widget class="QLineEdit" name="lineEdit_fields_dest">
           <property name="font">
            <font>
             <pointsize>11</pointsize>
@@ -1142,8 +1142,8 @@
        <zorder>push_fullauto</zorder>
        <zorder>verticalSpacer_5</zorder>
        <zorder>push_switch</zorder>
-       <zorder>source_lineEdit_fields</zorder>
-       <zorder>destination_lineEdit_fields</zorder>
+       <zorder>lineEdit_fields_source</zorder>
+       <zorder>lineEdit_fields_dest</zorder>
        <zorder>verticalSpacer_2</zorder>
        <zorder>verticalSpacer_6</zorder>
        <zorder>verticalSpacer_7</zorder>
@@ -1162,25 +1162,25 @@
  </customwidgets>
  <tabstops>
   <tabstop>push_complete</tabstop>
-  <tabstop>source_comboBox_layers</tabstop>
-  <tabstop>source_comboBox_fields</tabstop>
-  <tabstop>destination_comboBox_layers</tabstop>
-  <tabstop>destination_comboBox_fields</tabstop>
+  <tabstop>comboBox_layers_source</tabstop>
+  <tabstop>comboBox_fields_source</tabstop>
+  <tabstop>comboBox_layers_dest</tabstop>
+  <tabstop>comboBox_fields_dest</tabstop>
   <tabstop>push_file</tabstop>
   <tabstop>push_next</tabstop>
   <tabstop>push_cancel_create</tabstop>
-  <tabstop>source_comboBox_layers_complete</tabstop>
-  <tabstop>destination_comboBox_layers_complete</tabstop>
+  <tabstop>comboBox_layers_source_complete</tabstop>
+  <tabstop>comboBox_layers_dest_complete</tabstop>
   <tabstop>push_file_complete</tabstop>
   <tabstop>push_next_complete</tabstop>
   <tabstop>push_cancel_complete</tabstop>
-  <tabstop>source_lineEdit_fields</tabstop>
-  <tabstop>buffer_lineEdit_distance</tabstop>
-  <tabstop>precision_lineEdit</tabstop>
+  <tabstop>lineEdit_fields_source</tabstop>
+  <tabstop>lineEdit_buffer_distance</tabstop>
+  <tabstop>lineEdit_precision</tabstop>
   <tabstop>push_auto</tabstop>
   <tabstop>push_fullauto</tabstop>
   <tabstop>push_switch</tabstop>
-  <tabstop>destination_lineEdit_fields</tabstop>
+  <tabstop>lineEdit_fields_dest</tabstop>
   <tabstop>push_add</tabstop>
   <tabstop>push_cancel_3</tabstop>
   <tabstop>lineEdit_file</tabstop>
