@@ -5,12 +5,12 @@
 [general]
 name=DiagwayProjection
 qgisMinimumVersion=3.0
-description=Projection de route
+description=Projection routier
 version=0.1
 author=Cochet Quentin / Diagway
 email=quentin.cochet@outlook.com
 
-about=A MODIFIER !!!!!!!!!
+about=projects field road data onto client road data.
 
 tracker=http://bugs
 repository=http://repo

@@ -9,13 +9,13 @@ class Worker(QtCore.QObject):
     error = QtCore.pyqtSignal(Exception, str)
     progress = QtCore.pyqtSignal(float)
 
-    def __init__(self, source_layer, destination_layer, csv_path, source_field, destination_field, buffer_distance, precision):
+    def __init__(self, layer_source, layer_dest, path_csv, field_source, field_dest, buffer_distance, precision):
         QtCore.QObject.__init__(self)
-        self.source_layer = source_layer
-        self.destination_layer = destination_layer
-        self.csv_path = csv_path
-        self.source_field = source_field
-        self.destination_field = destination_field
+        self.layer_source = layer_source
+        self.layer_dest = layer_dest
+        self.path_csv = path_csv
+        self.field_source = field_source
+        self.field_dest = field_dest
         self.buffer_distance = buffer_distance
         self.precision = precision
         self.killed = False
@@ -33,16 +33,16 @@ class Worker(QtCore.QObject):
             source_values_done = []
             source_values = []
 
-            with open(self.csv_path, "r") as csv:
+            with open(self.path_csv, "r") as csv:
                 csv_lines = csv.readlines()
 
             for line in csv_lines:
                 source_values_done.append(line.split(";")[0])
             source_values_done.pop(0)
 
-            source_feats = self.source_layer.getFeatures()
-            for feat in source_feats:
-                source_values.append(str(feat[self.source_field]))
+            layer_source_feats = self.layer_source.getFeatures()
+            for feat in layer_source_feats:
+                source_values.append(str(feat[self.field_source]))
 
             source_values_toDo = [source_value for source_value in source_values if source_value not in source_values_done]
 
@@ -51,15 +51,15 @@ class Worker(QtCore.QObject):
             count_progress = 1
             for source_value in  source_values_toDo:
                 if (self.killed):
-                    statementSource_layer = None
+                    layer_statement = None
                     break
 
                 if (source_value is str):
-                    self.source_layer.filter("{} = '{}'".format(self.source_field, source_value))
+                    self.layer_source.filter("{} = '{}'".format(self.field_source, source_value))
                 else:
-                    self.source_layer.filter("{} = {}".format(self.source_field, source_value))
+                    self.layer_source.filter("{} = {}".format(self.field_source, source_value))
 
-                destination_values = getDestBySource(self.source_layer, self.destination_layer, source_value, self.source_field, self.destination_field, self.buffer_distance, self.precision)
+                destination_values = getDestBySource(self.layer_source, self.layer_dest, source_value, self.field_source, self.field_dest, self.buffer_distance, self.precision)
 
                 if (len(destination_values) > 0):
                     line = ""
@@ -67,21 +67,21 @@ class Worker(QtCore.QObject):
                         line += str(dest_value) + ";"
                     line = line[:-1]
 
-                    addLineCSV(self.csv_path, source_value, line)
+                    addLineCSV(self.path_csv, source_value, line)
 
                     count_progress += 1
                     self.progress.emit(count_progress*100/length)
 
-            self.source_layer.setVisibility(False)
-            self.destination_layer.setVisibility(False)
+            self.layer_source.setVisibility(False)
+            self.layer_dest.setVisibility(False)
 
-            statementSource_layer = createLayerStyleByCSV(self.csv_path)
+            layer_statement = createLayerStyleByCSV(self.path_csv)
 
             #Clear filter 
-            self.source_layer.filter("")
-            self.destination_layer.filter("")
+            self.layer_source.filter("")
+            self.layer_dest.filter("")
         except Exception as e:
-            statementSource_layer = None
+            layer_statement = None
             self.error.emit(e, traceback.format_exc())
             
-        self.finished.emit(statementSource_layer)
+        self.finished.emit(layer_statement)

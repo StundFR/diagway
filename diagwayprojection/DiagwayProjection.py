@@ -74,10 +74,9 @@ class DiagwayProjection(QtCore.QObject):
     #--------------------------------------------------------------------------
 
     """Function for the plugins"""
-    # noinspection PyMethodMayBeStatic
+    #Get the translation for a string using Qt translation API
     def tr(self, message):
-        """Get the translation for a string using Qt translation API.
-
+        """
         We implement this ourselves since we do not inherit QObject.
 
         :param message: String for translation.
@@ -89,6 +88,7 @@ class DiagwayProjection(QtCore.QObject):
         # noinspection PyTypeChecker,PyArgumentList,PyCallByClass
         return QCoreApplication.translate('DiagwayProjection', message)
 
+    #Add a toolbar icon to the toolbar
     def add_action(
         self,
         icon_path,
@@ -100,8 +100,7 @@ class DiagwayProjection(QtCore.QObject):
         status_tip=None,
         whats_this=None,
         parent=None):
-        """Add a toolbar icon to the toolbar.
-
+        """
         :param icon_path: Path to the icon for this action. Can be a resource
             path (e.g. ':/plugins/foo/bar.png') or a normal file system path.
         :type icon_path: str
@@ -162,9 +161,8 @@ class DiagwayProjection(QtCore.QObject):
 
         return action
 
+    #Create the menu entries and toolbar icons inside the QGIS GUI
     def initGui(self):
-        """Create the menu entries and toolbar icons inside the QGIS GUI."""
-
         icon_path = ':/plugins/DiagwayProjection/icon.png'
         self.add_action(
             icon_path,
@@ -172,10 +170,9 @@ class DiagwayProjection(QtCore.QObject):
             callback=self.run,
             parent=self.iface.mainWindow())
 
+    #Cleanup necessary items here when plugin dockwidget is closed
     def onClosePlugin(self):
-        """Cleanup necessary items here when plugin dockwidget is closed"""
-
-        #print "** CLOSING DiagwayProjection"
+        print("** CLOSING DiagwayProjection")
 
         # disconnects
         self.dockwidget.closingPlugin.disconnect(self.onClosePlugin)
@@ -188,10 +185,9 @@ class DiagwayProjection(QtCore.QObject):
 
         self.pluginIsActive = False
 
+    #Removes the plugin menu item and icon from QGIS GUI
     def unload(self):
-        """Removes the plugin menu item and icon from QGIS GUI."""
-
-        #print "** UNLOAD DiagwayProjection"
+        print("** UNLOAD DiagwayProjection")
 
         for action in self.actions:
             self.iface.removePluginMenu(
@@ -203,31 +199,31 @@ class DiagwayProjection(QtCore.QObject):
     #--------------------------------------------------------------------------
 
     """Function for the algorithm"""
-    #Create the path for the CSV file
+    #Create the path for the CSV file (Replace file)
     def saveFile(self):
         filename, _filter = QFileDialog.getSaveFileName(self.dockwidget, "Select output file ","", '*.csv')
         self.dockwidget.lineEdit_file.setText(filename)
 
-
+    #Create the path for the CSV file (Complete file)
     def selectFile(self):
         filename, _filter = QFileDialog.getOpenFileName(self.dockwidget, "Select output file ","", '*.csv')
         self.dockwidget.lineEdit_file_complete.setText(filename)
 
-
+    #Get source, destination layer and the CSV path
     def getSourceDestFile(self):
         if (self.dockwidget.radio_a.isChecked()):
-            csv_path = self.dockwidget.lineEdit_file_complete.text()
-            source_layer = self.dockwidget.source_comboBox_layers_complete.currentLayer()
-            destination_layer = self.dockwidget.destination_comboBox_layers_complete.currentLayer()
+            path_csv = self.dockwidget.lineEdit_file_complete.text()
+            layer_source = self.dockwidget.source_comboBox_layers_complete.currentLayer()
+            layer_dest = self.dockwidget.destination_comboBox_layers_complete.currentLayer()
         else:
-            csv_path = self.dockwidget.lineEdit_file.text()
-            source_layer = self.dockwidget.source_comboBox_layers.currentLayer()
-            destination_layer = self.dockwidget.destination_comboBox_layers.currentLayer()
+            path_csv = self.dockwidget.lineEdit_file.text()
+            layer_source = self.dockwidget.source_comboBox_layers.currentLayer()
+            layer_dest = self.dockwidget.destination_comboBox_layers.currentLayer()
 
-        source_layer = QgsLayer(vectorLayer=source_layer)
-        destination_layer = QgsLayer(vectorLayer=destination_layer)
+        layer_source = QgsLayer(vectorLayer=layer_source)
+        layer_dest = QgsLayer(vectorLayer=layer_dest)
         
-        return source_layer, destination_layer, csv_path
+        return layer_source, layer_dest, path_csv
 
     #Filled the combo box fields
     def fillFields(self, comboBox):
@@ -240,9 +236,9 @@ class DiagwayProjection(QtCore.QObject):
 
     #Check if all box are correct
     def checkAll(self):
-        source_layer, destination_layer, csv_path = self.getSourceDestFile()
+        layer_source, layer_dest, path_csv = self.getSourceDestFile()
 
-        check = ((source_layer != destination_layer) and (source_layer != None) and (destination_layer != None) and (csv_path != "") and source_layer.isLT93() and destination_layer.isLT93())
+        check = ((layer_source != layer_dest) and (layer_source != None) and (layer_dest != None) and (path_csv != "") and layer_source.isLT93() and layer_dest.isLT93())
 
         if (self.dockwidget.radio_w.isChecked()):
             self.dockwidget.push_next.setEnabled(check)
@@ -251,9 +247,9 @@ class DiagwayProjection(QtCore.QObject):
 
 
     def filePreview(self):
-        csv_path = self.dockwidget.lineEdit_file_complete.text()
+        path_csv = self.dockwidget.lineEdit_file_complete.text()
         try:
-            with open(csv_path, "r") as csv:
+            with open(path_csv, "r") as csv:
                 text = csv.read()
         except (FileNotFoundError, OSError):
             text = "File doesn't exist"
@@ -266,48 +262,48 @@ class DiagwayProjection(QtCore.QObject):
 
 
     def setupPage3(self):
-        source_layer, destination_layer, csv_path = self.getSourceDestFile()
-        source_layer.filter("")
-        destination_layer.filter("")
+        layer_source, layer_dest, path_csv = self.getSourceDestFile()
+        layer_source.filter("")
+        layer_dest.filter("")
 
         if (self.dockwidget.radio_w.isChecked()):
-            source_field = self.dockwidget.source_comboBox_fields.currentText()
-            destination_field = self.dockwidget.destination_comboBox_fields.currentText()
+            field_source = self.dockwidget.source_comboBox_fields.currentText()
+            field_dest = self.dockwidget.destination_comboBox_fields.currentText()
 
-            self.dockwidget.source_label_field.setText(source_field + " :")
-            self.dockwidget.destination_label_field.setText(destination_field + " :")
+            self.dockwidget.source_label_field.setText(field_source + " :")
+            self.dockwidget.destination_label_field.setText(field_dest + " :")
 
-            line = "{};{}\n".format(source_field, destination_field)
-            with open(csv_path, "w") as csv:
+            line = "{};{}\n".format(field_source, field_dest)
+            with open(path_csv, "w") as csv:
                 csv.write(line)
         else:
-            with open(csv_path, "r") as csv:
+            with open(path_csv, "r") as csv:
                 header = csv.readline()
 
             header = header.split(";")
-            source_label = header[0] + " :"
-            destination_label = header[1]
-            destination_label = destination_label[:-1] + " :"
+            label_source = header[0] + " :"
+            label_dest = header[1]
+            label_dest = label_dest[:-1] + " :"
 
-            self.dockwidget.source_label_field.setText(source_label)
-            self.dockwidget.destination_label_field.setText(destination_label)
+            self.dockwidget.source_label_field.setText(label_source)
+            self.dockwidget.destination_label_field.setText(label_dest)
 
-        name = getNameFromPath(csv_path)
+        name = getNameFromPath(path_csv)
         QgsLayer.removeLayersByName(name)
-        self.iface.addVectorLayer(csv_path, "", "ogr")
+        self.iface.addVectorLayer(path_csv, "", "ogr")
 
-        sourceStatement_layer = source_layer.clone()
+        layer_statement = layer_source.clone()
 
-        sourceStatement_layer.setName("Statement_source")
+        layer_statement.setName("Statement_source")
 
         QgsLayer.removeLayersByName("Statement_source")
 
-        sourceStatement_layer.add()
+        layer_statement.add()
 
-        source_layer.setVisibility(False)
-        destination_layer.setVisibility(False)
+        layer_source.setVisibility(False)
+        layer_dest.setVisibility(False)
 
-        QgsLayer.styleByCSV(sourceStatement_layer, csv_path)
+        QgsLayer.styleByCSV(layer_statement, path_csv)
             
 
     def checkAutoButton(self):
@@ -343,79 +339,79 @@ class DiagwayProjection(QtCore.QObject):
 
 
     def checkAddButton(self):
-        source_textEdit = self.dockwidget.source_lineEdit_fields.text()
-        destination_textEdit = self.dockwidget.destination_lineEdit_fields.text()
+        textEdit_source = self.dockwidget.source_lineEdit_fields.text()
+        textEdit_dest = self.dockwidget.destination_lineEdit_fields.text()
 
-        if ((destination_textEdit == "") or (source_textEdit == "")):
+        if ((textEdit_dest == "") or (textEdit_source == "")):
             self.dockwidget.push_add.setEnabled(False)
         else:
             self.dockwidget.push_add.setEnabled(True)
 
 
     def getSelectedEntity(self):
-        source_layer, destination_layer, csv_path = self.getSourceDestFile()
+        layer_source, layer_dest, path_csv = self.getSourceDestFile()
 
-        source_fields = ""
-        destination_fields = ""
+        fields_source = ""
+        fields_dest = ""
 
-        if (source_layer is not None):
-            source_label = self.dockwidget.source_label_field.text()[:-2]
-            source_feats = source_layer.selectedFeatures()
-            for f in source_feats:
-                source_fields += str(f[source_label]) + ";"
+        if (layer_source is not None):
+            label_source = self.dockwidget.source_label_field.text()[:-2]
+            feats_source = layer_source.selectedFeatures()
+            for f in feats_source:
+                fields_source += str(f[label_source]) + ";"
 
-        if (destination_layer is not None):
-            destination_label = self.dockwidget.destination_label_field.text()[:-2]
-            destination_feats = destination_layer.selectedFeatures()
+        if (layer_dest is not None):
+            label_dest = self.dockwidget.destination_label_field.text()[:-2]
+            destination_feats = layer_dest.selectedFeatures()
             for f in destination_feats:
-                destination_fields += str(f[destination_label]) + ";"
+                fields_dest += str(f[label_dest]) + ";"
 
-        source_fields = source_fields[:-1]
-        destination_fields = destination_fields[:-1]
+        fields_source = fields_source[:-1]
+        fields_dest = fields_dest[:-1]
 
-        if (source_fields != ""):
-            self.dockwidget.source_lineEdit_fields.setText(source_fields)
-        self.dockwidget.destination_lineEdit_fields.setText(destination_fields)       
+        if (fields_source != ""):
+            self.dockwidget.source_lineEdit_fields.setText(fields_source)
+        self.dockwidget.destination_lineEdit_fields.setText(fields_dest)       
 
 
     def addFields(self):
-        source_layer, destination_layer, csv_path = self.getSourceDestFile()
+        layer_source, layer_dest, path_csv = self.getSourceDestFile()
 
-        source_text = self.dockwidget.source_lineEdit_fields.text()
-        destination_text = self.dockwidget.destination_lineEdit_fields.text()
+        text_source = self.dockwidget.source_lineEdit_fields.text()
+        text_dest = self.dockwidget.destination_lineEdit_fields.text()
 
-        addLineCSV(csv_path, source_text, destination_text)
+        addLineCSV(path_csv, text_source, text_dest)
 
         self.dockwidget.source_lineEdit_fields.setText("")
         self.dockwidget.destination_lineEdit_fields.setText("")
 
-        source_layer.setVisibility(False)
-        destination_layer.setVisibility(False)
-        createLayerStyleByCSV(csv_path)
+        layer_source.setVisibility(False)
+        layer_dest.setVisibility(False)
+        createLayerStyleByCSV(path_csv)
         self.iface.mapCanvas().refreshAllLayers() 
 
 
     def getAutoDestinationFields(self):
         #Get data
-        source_layer, destination_layer, csv_path = self.getSourceDestFile()
+        layer_source, layer_dest, path_csv = self.getSourceDestFile()
 
-        source_field = self.dockwidget.source_label_field.text()[:-2]
-        destination_field = self.dockwidget.destination_label_field.text()[:-2]
+        field_source = self.dockwidget.source_label_field.text()[:-2]
+        field_dest = self.dockwidget.destination_label_field.text()[:-2]
 
         source_value = self.dockwidget.source_lineEdit_fields.text()
         buffer_distance = int(self.dockwidget.buffer_lineEdit_distance.text())
         precision = float(self.dockwidget.precision_lineEdit.text())/100
 
-        destination_values = getDestBySource(source_layer, destination_layer, source_value, source_field, destination_field, buffer_distance, precision)
+        dest_value = getDestBySource(layer_source, layer_dest, source_value, field_source, field_dest, buffer_distance, precision)
 
-        if (len(destination_values) == 0):
+        if (len(dest_value) == 0):
             isEmpty = True
         else:
             isEmpty = False
 
         #Create the line
         line = ""
-        for value in destination_values:
+        for value in dest_value:
             line += str(value) + ";"
         line = line[:-1]
 
@@ -423,55 +419,55 @@ class DiagwayProjection(QtCore.QObject):
         self.dockwidget.destination_lineEdit_fields.setText(line)
 
         #Filter
-        destination_expression = expressionFromFields(destination_field, line)
-        source_expression = expressionFromFields(source_field, source_value)
+        expression_source = expressionFromFields(field_dest, line)
+        expression_dest = expressionFromFields(field_source, source_value)
 
         #Change style
         destination_rules = (
-            ("Destinations", destination_expression, "blue"),
+            ("Destinations", expression_source, "blue"),
             ("Other", "ELSE", "darkBrown")
         )
         source_rules = (
-            ("source", source_expression, "magenta"),
+            ("source", expression_dest, "magenta"),
             ("Other", "ELSE", "brown")
         )
 
-        destination_layer.styleByRules(destination_rules)
-        source_layer.styleByRules(source_rules)
+        layer_dest.styleByRules(destination_rules)
+        layer_source.styleByRules(source_rules)
 
         #Zoom
-        destination_layer.filter(destination_expression)
-        destination_layer.zoom(self)
+        layer_dest.filter(expression_source)
+        layer_dest.zoom(self)
 
         #Hide statement
-        statementSource_layer = QgsLayer.findLayerByName("Statement_source")
-        statementSource_layer.setVisibility(False)
+        layer_statement = QgsLayer.findLayerByName("Statement_source")
+        layer_statement.setVisibility(False)
 
-        source_layer.setVisibility(True)
-        destination_layer.setVisibility(True)
+        layer_source.setVisibility(True)
+        layer_dest.setVisibility(True)
 
         #Clear message
         if (isEmpty):
-            source_layer.filter(source_expression)
-            source_layer.zoom(self)
+            layer_source.filter(expression_dest)
+            layer_source.zoom(self)
             self.iface.messageBar().pushMessage("Done", "No destination found", level=1, duration=4)
         else:
-            destination_layer.filter(destination_expression)
-            destination_layer.zoom(self)
+            layer_dest.filter(expression_source)
+            layer_dest.zoom(self)
             self.iface.messageBar().pushMessage("Done", "Destination found !", level=3, duration=4)
 
         #Clear filter 
-        source_layer.filter("")
-        destination_layer.filter("")
+        layer_source.filter("")
+        layer_dest.filter("")
 
 
     def switch(self):
-        source_layer, destination_layer, csv_path = self.getSourceDestFile()
-        statementSource_layer = QgsLayer.findLayerByName("Statement_source")
+        layer_source, layer_dest, path_csv = self.getSourceDestFile()
+        layer_statement = QgsLayer.findLayerByName("Statement_source")
 
-        layers = [source_layer, destination_layer] 
+        layers = [layer_source, layer_dest] 
 
-        if (source_layer.isVisible()):
+        if (layer_source.isVisible()):
             visibility = False
         else:
             visibility = True
@@ -479,55 +475,55 @@ class DiagwayProjection(QtCore.QObject):
         for l in layers:
             l.setVisibility(visibility)
 
-        statementSource_layer.setVisibility(not visibility)
+        layer_statement.setVisibility(not visibility)
         
         
     def showField(self):
-        destination_textEdit = self.dockwidget.destination_lineEdit_fields
-        source_field = self.dockwidget.source_label_field.text()[:-2]
-        destination_field = self.dockwidget.destination_label_field.text()[:-2]
-        source_field_value = self.sender().text()
-        source_layer, destination_layer, csv_path = self.getSourceDestFile()
+        textEdit_dest = self.dockwidget.destination_lineEdit_fields
+        field_source = self.dockwidget.source_label_field.text()[:-2]
+        field_dest = self.dockwidget.destination_label_field.text()[:-2]
+        field_source_value = self.sender().text()
+        layer_source, layer_dest, path_csv = self.getSourceDestFile()
 
-        with open(csv_path, "r") as csv:
+        with open(path_csv, "r") as csv:
             lines = csv.readlines()
 
         for line in lines:
             id = line.split("\"")[0]
             id = id[:-1]
-            if (source_field_value == id):
-                destination_field_value = line.split("\"")[1]
-                destination_textEdit.setText(destination_field_value)
+            if (field_source_value == id):
+                field_dest_value = line.split("\"")[1]
+                textEdit_dest.setText(field_dest_value)
 
-                source_expression = "\"{}\" = {}".format(source_field, source_field_value)
-                destination_expression = "\"{}\" in ('{}')".format(destination_field, destination_field_value.replace(";", "','"))
+                expression_dest = "\"{}\" = {}".format(field_source, field_source_value)
+                expression_source = "\"{}\" in ('{}')".format(field_dest, field_dest_value.replace(";", "','"))
 
                 source_statement = QgsLayer.findLayerByName("Statement_source")
 
                 source_statement.setVisibility(False)
-                source_layer.setVisibility(True)
-                destination_layer.setVisibility(True)
+                layer_source.setVisibility(True)
+                layer_dest.setVisibility(True)
 
-                destination_layer.filter(destination_expression)
-                destination_layer.zoom(self)
-                destination_layer.filter("")
+                layer_dest.filter(expression_source)
+                layer_dest.zoom(self)
+                layer_dest.filter("")
 
-                source_layer.vector.selectByExpression(source_expression)
-                destination_layer.vector.selectByExpression(destination_expression)
+                layer_source.vector.selectByExpression(expression_dest)
+                layer_dest.vector.selectByExpression(expression_source)
                 return
 
-        destination_textEdit.setText("")
+        textEdit_dest.setText("")
     
     #--------------------------------------------------------------------------
 
     """Full auto function"""
     def startAlgo(self):
-        source_layer, destination_layer, csv_path = self.getSourceDestFile()
-        source_field = self.dockwidget.source_label_field.text()[:-2]
-        destination_field = self.dockwidget.destination_label_field.text()[:-2]
+        layer_source, layer_dest, path_csv = self.getSourceDestFile()
+        field_source = self.dockwidget.source_label_field.text()[:-2]
+        field_dest = self.dockwidget.destination_label_field.text()[:-2]
         buffer_distance = int(self.dockwidget.buffer_lineEdit_distance.text())
         precision = float(self.dockwidget.precision_lineEdit.text())/100
-        worker = Worker(source_layer, destination_layer, csv_path, source_field, destination_field, buffer_distance, precision)
+        worker = Worker(layer_source, layer_dest, path_csv, field_source, field_dest, buffer_distance, precision)
 
         # configure the QgsMessageBar
         messageBar = self.iface.messageBar().createMessage('Running...', )
