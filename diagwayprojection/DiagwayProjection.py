@@ -32,7 +32,8 @@ from .resources import *
 # Import the code for the DockWidget
 from .DiagwayProjection_dockwidget import DiagwayProjectionDockWidget
 from .Layer import QgsLayer
-from .Worker import Worker
+from .WorkerAuto import WorkerAuto
+from .WorkerFullAuto import WorkerFullAuto
 from .Tools import *
 import os.path
 
@@ -172,23 +173,14 @@ class DiagwayProjection(QtCore.QObject):
 
     #Cleanup necessary items here when plugin dockwidget is closed
     def onClosePlugin(self):
-        print("** CLOSING DiagwayProjection")
-
-        # disconnects
+        #disconnects
         self.dockwidget.closingPlugin.disconnect(self.onClosePlugin)
 
-        # remove this statement if dockwidget is to remain
-        # for reuse if plugin is reopened
-        # Commented next statement since it causes QGIS crashe
-        # when closing the docked window:
-        # self.dockwidget = None
-
+        #self.dockwidget = None
         self.pluginIsActive = False
 
     #Removes the plugin menu item and icon from QGIS GUI
     def unload(self):
-        print("** UNLOAD DiagwayProjection")
-
         for action in self.actions:
             self.iface.removePluginMenu(
                 self.tr(u'&DiagwayProjection'),
@@ -245,7 +237,7 @@ class DiagwayProjection(QtCore.QObject):
         else:
             self.dockwidget.push_next_complete.setEnabled(check)
 
-
+    #Display the prewiew of a file in 
     def filePreview(self):
         path_csv = self.dockwidget.lineEdit_file_complete.text()
         try:
@@ -260,7 +252,7 @@ class DiagwayProjection(QtCore.QObject):
         finally:
             self.dockwidget.textEdit_preview.setText(text)
 
-
+    #Makes the preparations for the last page
     def setupPage3(self):
         layer_source, layer_dest, path_csv = self.getSourceDestFile()
         layer_source.filter("")
@@ -305,7 +297,7 @@ class DiagwayProjection(QtCore.QObject):
 
         QgsLayer.styleByCSV(layer_statement, path_csv)
             
-
+    #Check if all parameters are goods for the auto button
     def checkAutoButton(self):
         txt = self.dockwidget.lineEdit_fields_source.text()
         buffer_distance = self.dockwidget.lineEdit_buffer_distance.text()
@@ -316,14 +308,14 @@ class DiagwayProjection(QtCore.QObject):
             precision = int(precision)
         except ValueError:
             self.dockwidget.push_auto.setEnabled(False)
-            print("Value have to be an integer")
+            #print("Value have to be an integer")
         else:
             if (txt == ""):
                 self.dockwidget.push_auto.setEnabled(False)
             else :
                 self.dockwidget.push_auto.setEnabled(True)
 
-
+    #Check if all parameters are goods for the fullAuto button
     def checkFullAutoButton(self):
         buffer_distance = self.dockwidget.lineEdit_buffer_distance.text()
         precision = self.dockwidget.lineEdit_precision.text()
@@ -333,11 +325,11 @@ class DiagwayProjection(QtCore.QObject):
             precision = int(precision)
         except ValueError:
             self.dockwidget.push_fullauto.setEnabled(False)
-            print("Value have to be an integer")
+            #print("Value have to be an integer")
         else:
             self.dockwidget.push_fullauto.setEnabled(True)
 
-
+    #Check if all parameters are goods for the add button
     def checkAddButton(self):
         textEdit_source = self.dockwidget.lineEdit_fields_source.text()
         textEdit_dest = self.dockwidget.lineEdit_fields_dest.text()
@@ -347,7 +339,7 @@ class DiagwayProjection(QtCore.QObject):
         else:
             self.dockwidget.push_add.setEnabled(True)
 
-
+    #Add on the widget the entitys selected
     def getSelectedEntity(self):
         layer_source, layer_dest, path_csv = self.getSourceDestFile()
 
@@ -373,7 +365,7 @@ class DiagwayProjection(QtCore.QObject):
             self.dockwidget.lineEdit_fields_source.setText(fields_source)
         self.dockwidget.lineEdit_fields_dest.setText(fields_dest)       
 
-
+    #Add fields of a layer in comboBox
     def addFields(self):
         layer_source, layer_dest, path_csv = self.getSourceDestFile()
 
@@ -390,77 +382,7 @@ class DiagwayProjection(QtCore.QObject):
         createLayerStyleByCSV(path_csv)
         self.iface.mapCanvas().refreshAllLayers() 
 
-
-    def getAutoDestinationFields(self):
-        #Get data
-        layer_source, layer_dest, path_csv = self.getSourceDestFile()
-
-        field_source = self.dockwidget.label_field_source.text()[:-2]
-        field_dest = self.dockwidget.label_field_dest.text()[:-2]
-
-        source_value = self.dockwidget.lineEdit_fields_source.text()
-        buffer_distance = int(self.dockwidget.lineEdit_buffer_distance.text())
-        precision = float(self.dockwidget.lineEdit_precision.text())/100
-
-        dest_value = projection(layer_source, layer_dest, source_value, field_source, field_dest, buffer_distance, precision)
-
-        if (len(dest_value) == 0):
-            isEmpty = True
-        else:
-            isEmpty = False
-
-        #Create the line
-        line = ""
-        for value in dest_value:
-            line += str(value) + ";"
-        line = line[:-1]
-
-        #Write line
-        self.dockwidget.lineEdit_fields_dest.setText(line)
-
-        #Filter
-        expression_source = expressionFromFields(field_dest, line)
-        expression_dest = expressionFromFields(field_source, source_value)
-
-        #Change style
-        destination_rules = (
-            ("Destinations", expression_source, "blue"),
-            ("Other", "ELSE", "darkBrown")
-        )
-        source_rules = (
-            ("source", expression_dest, "magenta"),
-            ("Other", "ELSE", "brown")
-        )
-
-        layer_dest.styleByRules(destination_rules)
-        layer_source.styleByRules(source_rules)
-
-        #Zoom
-        layer_dest.filter(expression_source)
-        layer_dest.zoom(self)
-
-        #Hide statement
-        layer_statement = QgsLayer.findLayerByName("Statement_source")
-        layer_statement.setVisibility(False)
-
-        layer_source.setVisibility(True)
-        layer_dest.setVisibility(True)
-
-        #Clear message
-        if (isEmpty):
-            layer_source.filter(expression_dest)
-            layer_source.zoom(self)
-            self.iface.messageBar().pushMessage("Done", "No destination found", level=1, duration=4)
-        else:
-            layer_dest.filter(expression_source)
-            layer_dest.zoom(self)
-            self.iface.messageBar().pushMessage("Done", "Destination found !", level=3, duration=4)
-
-        #Clear filter 
-        layer_source.filter("")
-        layer_dest.filter("")
-
-
+    #Switch between layer
     def switch(self):
         layer_source, layer_dest, path_csv = self.getSourceDestFile()
         layer_statement = QgsLayer.findLayerByName("Statement_source")
@@ -477,7 +399,7 @@ class DiagwayProjection(QtCore.QObject):
 
         layer_statement.setVisibility(not visibility)
         
-        
+    #Select entity when you put a value in source lineEdit
     def showField(self):
         textEdit_dest = self.dockwidget.lineEdit_fields_dest
         field_source = self.dockwidget.label_field_source.text()[:-2]
@@ -516,14 +438,61 @@ class DiagwayProjection(QtCore.QObject):
     
     #--------------------------------------------------------------------------
 
+    """Auto function"""
+    def startAuto(self):
+        layer_source, layer_dest, path_csv = self.getSourceDestFile()
+        field_source = self.dockwidget.label_field_source.text()[:-2]
+        field_dest = self.dockwidget.label_field_dest.text()[:-2]
+        source_value = self.dockwidget.lineEdit_fields_source.text()
+        buffer_distance = int(self.dockwidget.lineEdit_buffer_distance.text())
+        precision = float(self.dockwidget.lineEdit_precision.text())/100
+        worker = WorkerAuto(layer_source, layer_dest, source_value, field_source, field_dest, buffer_distance, precision)
+
+        # configure the QgsMessageBar
+        messageBar = self.iface.messageBar().createMessage('Running...', )
+        self.iface.messageBar().pushWidget(messageBar)
+        self.messageBar = messageBar
+
+        # start the worker in a new thread
+        thread = QtCore.QThread(self)
+        worker.moveToThread(thread)
+        worker.finished.connect(self.autoFinished)
+        worker.error.connect(self.algoError)
+        thread.started.connect(worker.run)
+        thread.start()
+        self.thread = thread
+        self.worker = worker
+
+    def autoFinished(self, line):
+        # clean up the worker and thread
+        self.worker.deleteLater()
+        self.thread.quit()
+        self.thread.wait()
+        self.thread.deleteLater()
+        # remove widget from message bar
+        self.iface.messageBar().popWidget(self.messageBar)
+
+        if line != "":
+            # report the result    
+            self.iface.messageBar().pushMessage("Done", "Roads found", level=3, duration=4)
+        else:
+            # notify the user that something went wrong
+            self.iface.messageBar().pushMessage("Done", "Roads not found", level=4, duration=4)
+
+        self.dockwidget.lineEdit_fields_dest.setText(line)
+        self.worker.layer_dest.zoom(self)
+        self.worker.layer_source.filter("")
+        self.worker.layer_dest.filter("")
+
+
     """Full auto function"""
-    def startAlgo(self):
+    def startFullAuto(self):
         layer_source, layer_dest, path_csv = self.getSourceDestFile()
         field_source = self.dockwidget.label_field_source.text()[:-2]
         field_dest = self.dockwidget.label_field_dest.text()[:-2]
         buffer_distance = int(self.dockwidget.lineEdit_buffer_distance.text())
         precision = float(self.dockwidget.lineEdit_precision.text())/100
-        worker = Worker(layer_source, layer_dest, path_csv, field_source, field_dest, buffer_distance, precision)
+        worker = WorkerFullAuto(layer_source, layer_dest, path_csv, field_source, field_dest, buffer_distance, precision)
 
         # configure the QgsMessageBar
         messageBar = self.iface.messageBar().createMessage('Running...', )
@@ -540,7 +509,7 @@ class DiagwayProjection(QtCore.QObject):
         # start the worker in a new thread
         thread = QtCore.QThread(self)
         worker.moveToThread(thread)
-        worker.finished.connect(self.algoFinished)
+        worker.finished.connect(self.fullAutoFinished)
         worker.error.connect(self.algoError)
         worker.progress.connect(progressBar.setValue)
         thread.started.connect(worker.run)
@@ -548,7 +517,7 @@ class DiagwayProjection(QtCore.QObject):
         self.thread = thread
         self.worker = worker
 
-    def algoFinished(self, layer):
+    def fullAutoFinished(self, layer):
         # clean up the worker and thread
         self.worker.deleteLater()
         self.thread.quit()
@@ -573,11 +542,6 @@ class DiagwayProjection(QtCore.QObject):
         if not self.pluginIsActive:
             self.pluginIsActive = True
 
-            #print "** STARTING DiagwayProjection"
-
-            # dockwidget may not exist if:
-            #    first run of plugin
-            #    removed on close (see self.onClosePlugin method)
             if self.dockwidget == None:
                 # Create the dockwidget (after translation) and keep reference
                 self.dockwidget = DiagwayProjectionDockWidget()
@@ -621,8 +585,8 @@ class DiagwayProjection(QtCore.QObject):
                 self.dockwidget.push_next.clicked.connect(self.setupPage3)
                 self.dockwidget.push_next_complete.clicked.connect(self.setupPage3)
                 self.dockwidget.push_add.clicked.connect(self.addFields)
-                self.dockwidget.push_auto.clicked.connect(self.getAutoDestinationFields)
-                self.dockwidget.push_fullauto.clicked.connect(self.startAlgo)
+                self.dockwidget.push_auto.clicked.connect(self.startAuto)
+                self.dockwidget.push_fullauto.clicked.connect(self.startFullAuto)
                 self.dockwidget.push_switch.clicked.connect(self.switch)
 
                 #Connect lineEdit

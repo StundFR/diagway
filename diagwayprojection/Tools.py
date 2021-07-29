@@ -7,6 +7,7 @@ import tempfile
 
 from .Layer import QgsLayer
 
+#Delete duplicate value in list
 def supprDouble(list):
     resList = []
     for element in list:
@@ -14,28 +15,28 @@ def supprDouble(list):
             resList.append(element)
     return resList
 
-
+#Create a directory 
 def createDir(path_dir):
     try:
         mkdir(path_dir)
     except FileExistsError:
-        #print("Directory already exists")
+        print("Directory already exists")
         pass
 
-
+#Remove a directory
 def removeDir(path_dir):
     try:
         shutil.rmtree(path_dir)
     except OSError as e:
         print("Error: %s - %s." % (e.filename, e.strerror))
 
-
+#Get the name of file from his path
 def getNameFromPath(path):
     name = path.split("/")
     name = name[len(name)-1]
     return name.split(".")[0]
 
-
+#Generate an expression for filter layer
 def expressionFromFields(label, line):
     if (type(line.split(";")[0]) is str):
         line = "'" + line.replace(";", "','") + "'"
@@ -44,7 +45,7 @@ def expressionFromFields(label, line):
 
     return "\"{}\" in ({})".format(label, line)
 
-
+#Find the line of duplicate value in CSV file
 def duplicateLineCSV(csv_path, source_value):
     i = 0
     with open(csv_path, "r") as csv:
@@ -56,7 +57,7 @@ def duplicateLineCSV(csv_path, source_value):
     i = 0
     return i
 
-
+#Remove a line from a csv file
 def removeLineFile(path_file, nLine):
     with open(path_file, "r") as file:
         file_lines = file.readlines()
@@ -68,20 +69,19 @@ def removeLineFile(path_file, nLine):
                 file.write(line)
             i += 1
 
-
+#Extract by location proccesing, parameters : contains
 def extractByLocation(layer_source, layer_dest, path_output):
     parameters = {'INPUT' : layer_source.vector, 'PREDICATE' : 6, 'INTERSECT' : layer_dest.vector, 'OUTPUT' : path_output}
     processing.run("qgis:extractbylocation", parameters)
 
-
+#Calcul projection for source layer
 def getDestBySource(layer_source, layer_dest, source_value, field_source, field_dest, buffer_distance, precision):
     #Create folder in temp
     path_dir = getPath()
 
     source = str(source_value).replace("/", "")
-    path_buffer = path_dir +"/getDestBySource_buffer_{}_{}.shp".format(layer_source.name, source)
+    path_buffer = path_dir +"/buffer_{}_{}.shp".format(layer_source.name, source)
     path_extract = path_dir +"/getDestBySource_extract_{}_{}.shp".format(layer_source.name, source)
-    path_dissolve = path_dir +"/getDestBySource_dissolve_{}_{}.shp".format(layer_source.name, source)
 
     if (type(source_value) is str):
         expression = "\"{}\" = '{}'".format(field_source, source_value)
@@ -93,21 +93,7 @@ def getDestBySource(layer_source, layer_dest, source_value, field_source, field_
 
     layer_buffer = layer_source.buffer(buffer_distance, path_buffer)
 
-    #Check length of buffer
-    layer_buffer_feats = layer_buffer.getFeatures()
-    count = 0
-    for feat in layer_buffer_feats:
-        count += 1
-
-    #We need to dissolve buffer if there are more than one features
-    if (count > 1):
-        #Dissolve
-        processing.run('qgis:dissolve', {'INPUT' : path_buffer, 'FIELD' : "stc_route_sta_id", 'OUTPUT' : path_dissolve}) #A corriger pour le rendre dynamique
-        #Spatial extract
-        intersect(layer_dest, QgsLayer(path_dissolve, ""), precision, path_extract, source_value)
-    else:
-        #Spatial extract
-        intersect(layer_dest, QgsLayer(path_buffer, ""), precision, path_extract, source_value)
+    intersect(layer_dest, layer_buffer, precision, path_extract, source_value)
 
     #Get destinations
     layer_res = QgsLayer(path_extract, "res")
@@ -121,18 +107,17 @@ def getDestBySource(layer_source, layer_dest, source_value, field_source, field_
 
     return dest_values
 
-
-
+#Calcul if destination layer is the projection for source layer
 def getDestByDest(layer_source, layer_dest, source_value, field_source, field_dest, buffer_distance, precision, value_already_done):
     path_dir = getPath()
 
     source = str(source_value).replace("/", "")
-    path_buffer = "{}/getDestByDest_buffer_{}_{}.shp".format(path_dir,  layer_dest.name, source)
+    path_buffer = "{}/buffer_{}_{}.shp".format(path_dir,  layer_dest.name, source)
     layer_buffer_source = layer_source.buffer(buffer_distance, path_buffer)
 
 
     path_extract = "{}/getDestByDest_extract_{}_{}.shp".format(path_dir,  layer_dest.name, source)
-    extractByLocationIntersect(layer_dest, layer_buffer_source, path_extract)
+    clip(layer_dest, layer_buffer_source, path_extract)
     layer_extract = QgsLayer(path_extract, "")
 
     field_values = []
@@ -152,7 +137,7 @@ def getDestByDest(layer_source, layer_dest, source_value, field_source, field_de
 
     return dest_values
 
-
+#Project source layer on destination layer
 def projection(layer_source, layer_dest, source_value, field_source, field_dest, buffer_distance, precision):
 
     dest_values = getDestBySource(layer_source, layer_dest, source_value, field_source, field_dest, buffer_distance, precision)
@@ -161,7 +146,7 @@ def projection(layer_source, layer_dest, source_value, field_source, field_dest,
 
     return supprDouble(dest_values)
 
-
+#Add line in CSV file
 def addLineCSV(csv_path, source_value, destination_value):
     duplicateLine = duplicateLineCSV(csv_path, source_value)
 
@@ -172,7 +157,7 @@ def addLineCSV(csv_path, source_value, destination_value):
     with open(csv_path, "a") as csv:
         csv.write(line)
 
-
+#Create rules style for layer based on CSV file
 def createLayerStyleByCSV(csv_path):
     csv_layer = QgsLayer(csv_path, "")
     csv_layer.refresh()
@@ -184,27 +169,27 @@ def createLayerStyleByCSV(csv_path):
 
     return layer_statement
 
-
+#merged list of layers
 def mergeLayers(layers, path_output):
     parameters = {'LAYERS': layers, 'CRS': 'EPSG:4326', 'OUTPUT': path_output}
     processing.run("native:mergevectorlayers", parameters) 
 
-
+#Difference processing
 def difference(layer_source, layer_dest, path_output):
     parameters = {"INPUT" : layer_source.vector, "OVERLAY" : layer_dest.vector, "OUTPUT" : path_output}
     processing.run("qgis:difference", parameters)
 
-
+#Clip processing
 def clip(layer_source, layer_dest, path_output):
     parameters = {"INPUT" : layer_source.vector, "OVERLAY" : layer_dest.vector, "OUTPUT" : path_output}
     processing.run("qgis:clip", parameters)
 
-
+#Extract by location, parameters : intersect
 def extractByLocationIntersect(layer_source, layer_dest, path_output):
     parameters = {'INPUT' : layer_source.vector, 'PREDICATE' : 0, 'INTERSECT' : layer_dest.vector, 'OUTPUT' : path_output}
     processing.run("qgis:extractbylocation", parameters)
 
-
+#Works like extract by location, parameters : contains, with a precision 
 def intersect(layer_source, layer_dest, precision, path_output, source_value):
     path_dir = getPath()
     alea = int(random()*100/random())
@@ -223,9 +208,6 @@ def intersect(layer_source, layer_dest, precision, path_output, source_value):
     ids = []
     layer_clip_length = layer_clip.getAllFeatures("newLength")
     layer_extract_length = layer_extract.getAllFeatures("newLength")
-
-    #layer_clip.add()
-    #○layer_extract.add()
 
     for i in range(len(layer_clip_length)):
         if (layer_clip_length[i]/layer_extract_length[i] >= precision):
@@ -247,7 +229,7 @@ def intersect(layer_source, layer_dest, precision, path_output, source_value):
 
     return QgsLayer(path_output, "{}_intersect_{}".format(layer_source.name, layer_dest.name))
 
-
+#Get the path of temporary files
 def getPath():
     path_temp = tempfile.gettempdir()
     path_dir = path_temp + "/diagwayProjectionTmpLayer"

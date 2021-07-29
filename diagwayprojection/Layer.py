@@ -2,6 +2,7 @@ from qgis.core import QgsVectorLayer, QgsVectorFileWriter, QgsWkbTypes, QgsProje
 from qgis.PyQt.QtGui import QColor
 from qgis import processing
 from PyQt5.QtCore import *
+import os.path
 
 class QgsLayer:
     """Constructor"""
@@ -50,9 +51,13 @@ class QgsLayer:
 
     #create a buffer for a layer
     def buffer(self, buffer_distance, buffer_path):
+        buffer_name = "{}_buffer".format(self.name)
+
+        if (os.path.isfile(buffer_path)):
+            return QgsLayer(buffer_path, buffer_name)
+
         source_layer_feats = self.vector.getFeatures()
         source_layer_fields = self.vector.fields()
-        buffer_name = "{}_buffer".format(self.name)
         writer = QgsVectorFileWriter(buffer_path, 'UTF-8',  source_layer_fields, QgsWkbTypes.Polygon, self.vector.sourceCrs(), 'ESRI Shapefile')
         for feat in source_layer_feats:
             geom = feat.geometry()
@@ -122,7 +127,7 @@ class QgsLayer:
         root_rule.removeChildAt(0)
         self.vector.setRenderer(renderer)
 
-
+    #Calcul the length of each features of layer
     def addLengthFeat(self):
         self.vector.startEditing()
         caps = self.vector.dataProvider().capabilities()
@@ -141,7 +146,7 @@ class QgsLayer:
                 self.vector.changeAttributeValue(fid, idx, flen)
         self.vector.commitChanges()
 
-
+    #Get all the features of a field
     def getAllFeatures(self, field):
         features = self.getFeatures()
         feats = []
@@ -149,7 +154,7 @@ class QgsLayer:
             feats.append(f[field])
         return feats
 
-
+    #Export layer
     def export(self, output_path):
         writer = QgsVectorFileWriter.writeAsVectorFormat(self.vector, output_path, 'UTF-8', self.vector.sourceCrs(), 'ESRI Shapefile')
         del(writer)
@@ -162,6 +167,7 @@ class QgsLayer:
         layer = QgsProject.instance().mapLayersByName(name)[0]
         return QgsLayer(vectorLayer=layer)
 
+    #Remove layer by his name
     @classmethod
     def removeLayersByName(cls, name):
         project = QgsProject.instance()
@@ -169,6 +175,7 @@ class QgsLayer:
         for l in layers:
             project.removeMapLayers([l.id()])
 
+    #Changes the style of a layer using a CSV file
     @classmethod
     def styleByCSV(cls, source_layer, csv_path):
         csv_layer = QgsLayer(csv_path, "")
