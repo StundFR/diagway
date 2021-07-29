@@ -129,11 +129,11 @@ class QgsLayer:
         features = self.getFeatures()
 
         if caps & QgsVectorDataProvider.AddAttributes:
-            self.vector.dataProvider().addAttributes([QgsField("Length", QVariant.Double, "Double")])
+            self.vector.dataProvider().addAttributes([QgsField("newLength", QVariant.Double, "Double")])
         self.vector.commitChanges()
 
         self.vector.startEditing()
-        idx = self.vector.fields().indexFromName('Length')
+        idx = self.vector.fields().indexFromName('newLength')
         for feature in features:
             if caps & QgsVectorDataProvider.ChangeAttributeValues:
                 fid = feature.id()

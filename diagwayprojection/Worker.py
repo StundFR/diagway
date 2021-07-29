@@ -48,18 +48,15 @@ class Worker(QtCore.QObject):
 
             length = len(source_values_toDo)
             
-            count_progress = 1
+            count_progress = 0
+            self.progress.emit(count_progress*100/length)
+            
             for source_value in  source_values_toDo:
                 if (self.killed):
                     layer_statement = None
                     break
 
-                if (source_value is str):
-                    self.layer_source.filter("{} = '{}'".format(self.field_source, source_value))
-                else:
-                    self.layer_source.filter("{} = {}".format(self.field_source, source_value))
-
-                destination_values = getDestBySource(self.layer_source, self.layer_dest, source_value, self.field_source, self.field_dest, self.buffer_distance, self.precision)
+                destination_values = projection(self.layer_source, self.layer_dest, source_value, self.field_source, self.field_dest, self.buffer_distance, self.precision)
 
                 if (len(destination_values) > 0):
                     line = ""
@@ -69,8 +66,8 @@ class Worker(QtCore.QObject):
 
                     addLineCSV(self.path_csv, source_value, line)
 
-                    count_progress += 1
-                    self.progress.emit(count_progress*100/length)
+                count_progress += 1
+                self.progress.emit(count_progress*100/length)
 
             self.layer_source.setVisibility(False)
             self.layer_dest.setVisibility(False)

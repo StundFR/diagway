@@ -402,7 +402,7 @@ class DiagwayProjection(QtCore.QObject):
         buffer_distance = int(self.dockwidget.lineEdit_buffer_distance.text())
         precision = float(self.dockwidget.lineEdit_precision.text())/100
 
-        dest_value = getDestBySource(layer_source, layer_dest, source_value, field_source, field_dest, buffer_distance, precision)
+        dest_value = projection(layer_source, layer_dest, source_value, field_source, field_dest, buffer_distance, precision)
 
         if (len(dest_value) == 0):
             isEmpty = True
