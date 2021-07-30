@@ -893,6 +893,55 @@
          </layout>
         </item>
         <item>
+         <layout class="QHBoxLayout" name="horizontalLayout_16">
+          <item>
+           <widget class="QCheckBox" name="checkBox_labeling_source">
+            <property name="font">
+             <font>
+              <pointsize>11</pointsize>
+             </font>
+            </property>
+            <property name="text">
+             <string>Source label</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QCheckBox" name="checkBox_labeling_dest">
+            <property name="font">
+             <font>
+              <pointsize>11</pointsize>
+             </font>
+            </property>
+            <property name="text">
+             <string>Destination label</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QCheckBox" name="checkBox_labeling_statement">
+            <property name="font">
+             <font>
+              <pointsize>11</pointsize>
+             </font>
+            </property>
+            <property name="text">
+             <string>Statement label</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
          <layout class="QHBoxLayout" name="horizontalLayout_8">
           <item>
            <widget class="QLabel" name="label_buffer_distance">
@@ -1147,6 +1196,9 @@
        <zorder>verticalSpacer_2</zorder>
        <zorder>verticalSpacer_6</zorder>
        <zorder>verticalSpacer_7</zorder>
+       <zorder>checkBox_labeling_source</zorder>
+       <zorder>checkBox_labeling_dest</zorder>
+       <zorder>checkBox_labeling_statement</zorder>
       </widget>
      </widget>
     </item>

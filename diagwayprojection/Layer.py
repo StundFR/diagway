@@ -1,6 +1,5 @@
-from qgis.core import QgsVectorLayer, QgsVectorFileWriter, QgsWkbTypes, QgsProject, QgsRuleBasedRenderer, QgsSymbol, QgsVectorDataProvider, QgsField
-from qgis.PyQt.QtGui import QColor
-from qgis import processing
+from qgis.core import QgsVectorLayer, QgsVectorFileWriter, QgsWkbTypes, QgsProject, QgsRuleBasedRenderer, QgsSymbol, QgsVectorDataProvider, QgsField, QgsPalLayerSettings, QgsTextFormat, QgsTextBufferSettings,QgsVectorLayerSimpleLabeling
+from qgis.PyQt.QtGui import QColor, QFont
 from PyQt5.QtCore import *
 import os.path
 
@@ -122,9 +121,17 @@ class QgsLayer:
             rule = root_rule.children()[0].clone()
             rule.setLabel(label)
             rule.setFilterExpression(expression)
-            rule.symbol().setColor(QColor(color_name))
+            rule.symbol().setColor(color_name)
             root_rule.appendChild(rule)
         root_rule.removeChildAt(0)
+        self.vector.setRenderer(renderer)
+
+    #Set the symbol of a layer
+    def setSymbol(self, width, color):
+        symbol = QgsSymbol.defaultSymbol(self.vector.geometryType())
+        symbol.setWidth(width)
+        symbol.setColor(color)
+        renderer = QgsRuleBasedRenderer(symbol)
         self.vector.setRenderer(renderer)
 
     #Calcul the length of each features of layer
@@ -159,6 +166,38 @@ class QgsLayer:
         writer = QgsVectorFileWriter.writeAsVectorFormat(self.vector, output_path, 'UTF-8', self.vector.sourceCrs(), 'ESRI Shapefile')
         del(writer)
 
+    #Add label
+    def labeling(self, fontSize, field, color):
+        layer_settings  = QgsPalLayerSettings()
+        text_format = QgsTextFormat()
+
+        text_format.setFont(QFont("Arial", fontSize))
+        text_format.setSize(fontSize)
+        text_format.setColor(QColor(color))
+
+        buffer_settings = QgsTextBufferSettings()
+        buffer_settings.setEnabled(True)
+        buffer_settings.setSize(0.05)
+        buffer_settings.setColor(color)
+
+        text_format.setBuffer(buffer_settings)
+
+        layer_settings.setFormat(text_format)
+
+        layer_settings.fieldName = field
+        layer_settings.placement = QgsPalLayerSettings.Line
+
+        layer_settings.enabled = True
+
+        layer_settings = QgsVectorLayerSimpleLabeling(layer_settings)
+        self.vector.setLabelsEnabled(True)
+        self.vector.setLabeling(layer_settings)
+        self.vector.triggerRepaint()
+
+    #Display/hide label of a layer
+    def setLabel(self, choix):
+        self.vector.setLabelsEnabled(choix)
+        self.vector.triggerRepaint()
 
     """class functions"""
     #return layer by his name
@@ -181,7 +220,7 @@ class QgsLayer:
         csv_layer = QgsLayer(csv_path, "")
         fields_list = csv_layer.getFields()
         csv_feats = csv_layer.getFeatures()
-        color = ("green", "red")
+        color = (QColor("green"), QColor("red"))
 
 
         feats = []

@@ -115,7 +115,6 @@ def getDestByDest(layer_source, layer_dest, source_value, field_source, field_de
     path_buffer = "{}/buffer_{}_{}.shp".format(path_dir,  layer_dest.name, source)
     layer_buffer_source = layer_source.buffer(buffer_distance, path_buffer)
 
-
     path_extract = "{}/getDestByDest_extract_{}_{}.shp".format(path_dir,  layer_dest.name, source)
     clip(layer_dest, layer_buffer_source, path_extract)
     layer_extract = QgsLayer(path_extract, "")
@@ -192,7 +191,6 @@ def extractByLocationIntersect(layer_source, layer_dest, path_output):
 #Works like extract by location, parameters : contains, with a precision 
 def intersect(layer_source, layer_dest, precision, path_output, source_value):
     path_dir = getPath()
-    alea = int(random()*100/random())
 
     path_clip = path_dir + "/intersect_clip_{}_{}.shp".format(layer_source.name, source_value)
     clip(layer_source, layer_dest, path_clip)

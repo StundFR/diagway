@@ -1,4 +1,5 @@
 from PyQt5 import QtCore
+from PyQt5.QtGui import QColor
 from .Layer import QgsLayer
 from .Tools import *
 import traceback
@@ -39,12 +40,12 @@ class WorkerAuto(QtCore.QObject):
             expression_dest = expressionFromFields(self.field_source, self.source_value)
 
             destination_rules = (
-                ("Destinations", expression_source, "blue"),
-                ("Other", "ELSE", "darkBrown")
+                ("Destinations", expression_source, QColor(65,105,225)), #Blue
+                ("Other", "ELSE", QColor(139,69,19)) #Brown
             )
             source_rules = (
-                ("source", expression_dest, "magenta"),
-                ("Other", "ELSE", "brown")
+                ("source", expression_dest, QColor(255,215,0)), #Gold
+                ("Other", "ELSE", QColor("orange"))
             )
 
             self.layer_dest.styleByRules(destination_rules)

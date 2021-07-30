@@ -22,7 +22,7 @@
  ***************************************************************************/
 """
 from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, Qt
-from qgis.PyQt.QtGui import QIcon
+from qgis.PyQt.QtGui import QIcon, QColor
 from qgis.PyQt.QtWidgets import QAction, QFileDialog, QProgressBar, QPushButton
 from qgis.core import QgsMapLayerProxyModel, QgsMessageLog, Qgis
 
@@ -272,20 +272,24 @@ class DiagwayProjection(QtCore.QObject):
             with open(path_csv, "r") as csv:
                 header = csv.readline()
 
-            header = header.split(";")
-            label_source = header[0] + " :"
-            label_dest = header[1]
-            label_dest = label_dest[:-1] + " :"
+            field_source, field_dest = header.split(";")
+            label_source = field_source + " :"
+            label_dest = field_dest[:-1] + " :"
 
             self.dockwidget.label_field_source.setText(label_source)
             self.dockwidget.label_field_dest.setText(label_dest)
+
+        layer_source.setSymbol(0.8, QColor("orange"))
+        layer_dest.setSymbol(0.8, QColor(139,69,19)) #Brown
+
+        layer_source.labeling(10, field_source, QColor("orange"))
+        layer_dest.labeling(10, field_dest, QColor(139,69,19)) #Brown
 
         name = getNameFromPath(path_csv)
         QgsLayer.removeLayersByName(name)
         self.iface.addVectorLayer(path_csv, "", "ogr")
 
         layer_statement = layer_source.clone()
-
         layer_statement.setName("Statement_source")
 
         QgsLayer.removeLayersByName("Statement_source")
@@ -296,6 +300,8 @@ class DiagwayProjection(QtCore.QObject):
         layer_dest.setVisibility(False)
 
         QgsLayer.styleByCSV(layer_statement, path_csv)
+
+
             
     #Check if all parameters are goods for the auto button
     def checkAutoButton(self):
@@ -436,7 +442,15 @@ class DiagwayProjection(QtCore.QObject):
 
         textEdit_dest.setText("")
     
+
+    def showLabeling(self, layer):
+        check = self.sender().isChecked()
+        layer.setLabel(check)
+        layer.vector.triggerRepaint()
+
     #--------------------------------------------------------------------------
+    """Algo Multithreading"""
+
 
     """Auto function"""
     def startAuto(self):
@@ -533,6 +547,7 @@ class DiagwayProjection(QtCore.QObject):
             # notify the user that something went wrong
             self.iface.messageBar().pushMessage("Error", "Something went wrong... Check out the logs message for further informations", level=4, duration=4)
 
+
     def algoError(self, e, exception_string):
         QgsMessageLog.logMessage('Worker thread raised an exception: {} -- {}'.format(exception_string, e), level=Qgis.Critical)
     #--------------------------------------------------------------------------
@@ -599,6 +614,12 @@ class DiagwayProjection(QtCore.QObject):
                 self.dockwidget.lineEdit_fields_source.textChanged.connect(self.checkAddButton)
                 self.dockwidget.lineEdit_fields_dest.textChanged.connect(self.checkAddButton)
                 self.dockwidget.lineEdit_fields_source.editingFinished.connect(self.showField)
+
+                #Connect checkbox
+                self.dockwidget.checkBox_labeling_source.stateChanged.connect(lambda : self.showLabeling(self.getSourceDestFile()[0]))
+                self.dockwidget.checkBox_labeling_dest.stateChanged.connect(lambda : self.showLabeling(self.getSourceDestFile()[1]))
+                self.dockwidget.checkBox_labeling_statement.stateChanged.connect(lambda : self.showLabeling(QgsLayer.findLayerByName("Statement_source")))
+
 
                 self.iface.mapCanvas().selectionChanged.connect(self.getSelectedEntity)
 
