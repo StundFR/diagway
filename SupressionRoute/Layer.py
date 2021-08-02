@@ -1,11 +1,13 @@
-from qgis.core import QgsVectorLayer, QgsVectorFileWriter, QgsWkbTypes, QgsProject, QgsRuleBasedRenderer, QgsSymbol
-from qgis.PyQt.QtGui import QColor
+from qgis.core import QgsVectorLayer, QgsVectorFileWriter, QgsWkbTypes, QgsProject, QgsRuleBasedRenderer, QgsSymbol, QgsVectorDataProvider, QgsField, QgsPalLayerSettings, QgsTextFormat, QgsTextBufferSettings,QgsVectorLayerSimpleLabeling, QgsFeatureRequest
+from qgis.PyQt.QtGui import QColor, QFont
 from qgis import processing
-
+from qgis.core.additions.edit import edit
+from PyQt5.QtCore import *
+import os.path
 
 class QgsLayer:
     """Constructor"""
-    def __init__(self, path=None, name=None, vectorLayer=None) -> None:
+    def __init__(self, path=None, name=None, vectorLayer=None):
         if (vectorLayer is None):
             self.path = path
             self.name = name
@@ -35,9 +37,13 @@ class QgsLayer:
 
     #get type of field of layer
     def typeOfField(self, field_name):
-        feats = self.vector.getFeatures()
+        feats = self.getFeatures()
         for feat in feats:
-            return type(feat[field_name])
+            try:
+                res = type(feat[field_name])
+            except KeyError:
+                res = type("")
+            return res
 
     #zoom on layer
     def zoom(self, dlg):
@@ -46,9 +52,13 @@ class QgsLayer:
 
     #create a buffer for a layer
     def buffer(self, buffer_distance, buffer_path):
+        buffer_name = "{}_buffer".format(self.name)
+
+        if (os.path.isfile(buffer_path)):
+            return QgsLayer(buffer_path, buffer_name)
+
         source_layer_feats = self.vector.getFeatures()
         source_layer_fields = self.vector.fields()
-        buffer_name = "{}_buffer".format(self.name)
         writer = QgsVectorFileWriter(buffer_path, 'UTF-8',  source_layer_fields, QgsWkbTypes.Polygon, self.vector.sourceCrs(), 'ESRI Shapefile')
         for feat in source_layer_feats:
             geom = feat.geometry()
@@ -74,8 +84,9 @@ class QgsLayer:
     #clone layer
     def clone(self):
         name = self.name + "_clone"
-        clone = self.vector.clone()
-        return QgsLayer(vectorLayer=clone)
+        clone_vector = QgsVectorLayer(self.vector.source(), name, self.vector.providerType())
+        clone_layer = QgsLayer(vectorLayer=clone_vector)
+        return clone_layer
 
     #set visibility of layer
     def setVisibility(self, visibility):
@@ -101,6 +112,10 @@ class QgsLayer:
     def selectedFeatures(self):
         return self.vector.selectedFeatures()
 
+    #Select features by expression
+    def selectByExpression(self, expression):
+        return self.vector.selectByExpression(expression)
+
     #change style of layer by rules
     def styleByRules(self, rules):
         symbol = QgsSymbol.defaultSymbol(self.vector.geometryType())
@@ -111,16 +126,122 @@ class QgsLayer:
             rule = root_rule.children()[0].clone()
             rule.setLabel(label)
             rule.setFilterExpression(expression)
-            rule.symbol().setColor(QColor(color_name))
+            rule.symbol().setColor(color_name)
             root_rule.appendChild(rule)
         root_rule.removeChildAt(0)
         self.vector.setRenderer(renderer)
 
+    #Set the symbol of a layer
+    def setSymbol(self, width, color):
+        symbol = QgsSymbol.defaultSymbol(self.vector.geometryType())
+        symbol.setWidth(width)
+        symbol.setColor(color)
+        renderer = QgsRuleBasedRenderer(symbol)
+        self.vector.setRenderer(renderer)
+
+    #Add the length of each features of layer
+    def addLengthFeat(self):
+        self.vector.startEditing()
+        caps = self.vector.dataProvider().capabilities()
+        features = self.getFeatures()
+
+        if caps & QgsVectorDataProvider.AddAttributes:
+            self.vector.dataProvider().addAttributes([QgsField("newLength", QVariant.Double, "Double")])
+        self.vector.commitChanges()
+
+        self.vector.startEditing()
+        idx = self.vector.fields().indexFromName('newLength')
+        for feature in features:
+            if caps & QgsVectorDataProvider.ChangeAttributeValues:
+                fid = feature.id()
+                flen = feature.geometry().length()
+                self.vector.changeAttributeValue(fid, idx, flen)
+        self.vector.commitChanges()
+
+    #Add an unique ID of each features of layer
+    def addUniqueID(self):
+        caps = self.vector.dataProvider().capabilities()
+        field = QgsField('newID', QVariant.Int, "Int")
+
+        self.vector.startEditing()
+        if caps & QgsVectorDataProvider.AddAttributes:
+            self.vector.dataProvider().addAttributes([field])
+        self.vector.updateFields()
+
+        id = self.vector.dataProvider().fieldNameIndex('newID')
+        self.vector.commitChanges()
+
+        count=1
+        self.vector.startEditing()
+        # fill the field ID with rownumber
+        for f in self.vector.getFeatures():
+            rownum = count
+            count+=1
+            f[id]=rownum
+            self.vector.updateFeature(f)
+
+        self.vector.commitChanges()
+
+    #Get all the features of a field
+    def getAllFeatures(self, field):
+        features = self.getFeatures()
+        feats = []
+        for f in features:
+            feats.append(f[field])
+        return feats
+
+    #Export layer
+    def export(self, output_path):
+        writer = QgsVectorFileWriter.writeAsVectorFormat(self.vector, output_path, 'UTF-8', self.vector.sourceCrs(), 'ESRI Shapefile')
+        del(writer)
+
+    #Add label
+    def labeling(self, fontSize, field, color):
+        layer_settings  = QgsPalLayerSettings()
+        text_format = QgsTextFormat()
+
+        text_format.setFont(QFont("Arial", fontSize))
+        text_format.setSize(fontSize)
+        text_format.setColor(QColor(color))
+
+        buffer_settings = QgsTextBufferSettings()
+        buffer_settings.setEnabled(True)
+        buffer_settings.setSize(0.05)
+        buffer_settings.setColor(QColor("Black"))
+
+        text_format.setBuffer(buffer_settings)
+
+        layer_settings.setFormat(text_format)
+
+        layer_settings.fieldName = field
+        layer_settings.placement = QgsPalLayerSettings.Line
+
+        layer_settings.enabled = True
+
+        layer_settings = QgsVectorLayerSimpleLabeling(layer_settings)
+        self.vector.setLabelsEnabled(True)
+        self.vector.setLabeling(layer_settings)
+        self.vector.triggerRepaint()
+
+    #Display/hide label of a layer
+    def setLabel(self, choix):
+        self.vector.setLabelsEnabled(choix)
+        self.vector.triggerRepaint()
+
+    #Projecto layer to Lambert93
     def projectionLT93(self, output_path):
         parameters = {'INPUT': self.vector, 'TARGET_CRS': 'EPSG:2154', 'OUTPUT': output_path}
         processing.run("qgis:reprojectlayer", parameters)
         return QgsLayer(output_path, self.name+"_LT93")
 
+    #Remove features of a layer by an expression
+    def removeFeaturesByExpression(self, expression):
+        with edit(self.vector):
+            request = QgsFeatureRequest().setFilterExpression(expression)
+            request.setSubsetOfAttributes([])
+            request.setFlags(QgsFeatureRequest.NoGeometry)
+            for f in self.vector.getFeatures(request):
+                self.vector.deleteFeature(f.id())
 
     """class functions"""
     #return layer by his name
@@ -129,6 +250,7 @@ class QgsLayer:
         layer = QgsProject.instance().mapLayersByName(name)[0]
         return QgsLayer(vectorLayer=layer)
 
+    #Remove layer by his name
     @classmethod
     def removeLayersByName(cls, name):
         project = QgsProject.instance()
@@ -136,40 +258,40 @@ class QgsLayer:
         for l in layers:
             project.removeMapLayers([l.id()])
 
+    #Changes the style of a layer using a CSV file
     @classmethod
-    def styleByCSV(cls, source_layer, destination_layer, csv_path):
+    def styleByCSV(cls, source_layer, csv_path):
         csv_layer = QgsLayer(csv_path, "")
         fields_list = csv_layer.getFields()
         csv_feats = csv_layer.getFeatures()
+        color = (QColor("green"), QColor("red"))
 
-        layers_list = [source_layer, destination_layer]
-        layers_list_length = len(layers_list)
 
-        for i in range(layers_list_length):
-            feats = []
-            for feat in csv_feats:
-                if (type(feat[fields_list[i]]) is str):
-                    split = feat[fields_list[i]].split(";")
-                    for elem in split:
-                        feats.append(elem)
+        feats = []
+        for feat in csv_feats:
+            if (type(feat[fields_list[0]]) is str):
+                split = feat[fields_list[0]].split(";")
+                for elem in split:
+                    feats.append(elem)
 
-            field_type = layers_list[i].typeOfField(fields_list[i])
+        field_type = source_layer.typeOfField(fields_list[0])
 
-            txt = ""
-            if (field_type is str):
-                for feat in feats:
-                    txt += "'{}',".format(feat)
-            else:
-                for feat in feats:
-                    txt += "{},".format(feat)
-            txt = txt[:-1]
+        txt = ""
+        if (field_type is str):
+            for feat in feats:
+                txt += "'{}',".format(feat)
+        else:
+            for feat in feats:
+                txt += "{},".format(feat)
+        txt = txt[:-1]
             
-            expression = "\"{}\" in ({})".format(fields_list[i], txt)
+        expression = "\"{}\" in ({})".format(fields_list[0], txt)
 
-            rules = (
-                ("Road done", expression, "green"),
-                ("Road not done", "ELSE", "red")
-            )
+        rules = (
+            ("Done", expression, color[0]),
+            ("Not done", "ELSE", color[1])
+        )
 
-            layers_list[i].styleByRules(rules)
-            csv_feats = csv_layer.getFeatures()
+        source_layer.styleByRules(rules)
+        csv_feats = csv_layer.getFeatures()
+    

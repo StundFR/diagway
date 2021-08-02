@@ -278,14 +278,14 @@ class SuppresionRoute (QtCore.QObject):
         self.iface.messageBar().popWidget(self.messageBar)
         if layer is not None:
             # report the result
-            layer.add()
+            layer.add() 
             self.iface.messageBar().pushMessage('The layer {} is created.'.format(layer.name))
         else:
             # notify the user that something went wrong
             self.iface.messageBar().pushMessage('Something went wrong! See the message log for more information.', level=Qgis.Critical, duration=3)
 
     def algoError(self, e, exception_string):
-        QgsMessageLog.logMessage('Worker thread raised an exception:\n'.format(exception_string), level=Qgis.Critical)
+        QgsMessageLog.logMessage('Worker thread raised an exception: {} - {}'.format(exception_string, e), level=Qgis.Critical)
     #--------------------------------------------------------------------------
 
     """Run"""
