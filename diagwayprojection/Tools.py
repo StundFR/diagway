@@ -93,10 +93,9 @@ def getDestBySource(layer_source, layer_dest, source_value, field_source, field_
 
     layer_buffer = layer_source.buffer(buffer_distance, path_buffer)
 
-    intersect(layer_dest, layer_buffer, precision, path_extract, source_value)
+    layer_res = intersect(layer_dest, layer_buffer, precision, path_extract, source_value)
 
     #Get destinations
-    layer_res = QgsLayer(path_extract, "res")
     layer_res_feats = layer_res.getFeatures()
     dest_values = []
     for feat in layer_res_feats:

@@ -1,5 +1,7 @@
-from qgis.core import QgsVectorLayer, QgsVectorFileWriter, QgsWkbTypes, QgsProject, QgsRuleBasedRenderer, QgsSymbol, QgsVectorDataProvider, QgsField, QgsPalLayerSettings, QgsTextFormat, QgsTextBufferSettings,QgsVectorLayerSimpleLabeling
+from qgis.core import QgsVectorLayer, QgsVectorFileWriter, QgsWkbTypes, QgsProject, QgsRuleBasedRenderer, QgsSymbol, QgsVectorDataProvider, QgsField, QgsPalLayerSettings, QgsTextFormat, QgsTextBufferSettings,QgsVectorLayerSimpleLabeling, QgsFeatureRequest
 from qgis.PyQt.QtGui import QColor, QFont
+from qgis import processing
+from qgis.core.additions.edit import edit
 from PyQt5.QtCore import *
 import os.path
 
@@ -82,9 +84,8 @@ class QgsLayer:
     #clone layer
     def clone(self):
         name = self.name + "_clone"
-        clone_vector = self.vector.clone()
+        clone_vector = QgsVectorLayer(self.vector.source(), name, self.vector.providerType())
         clone_layer = QgsLayer(vectorLayer=clone_vector)
-        clone_layer.setName(name)
         return clone_layer
 
     #set visibility of layer
@@ -111,6 +112,10 @@ class QgsLayer:
     def selectedFeatures(self):
         return self.vector.selectedFeatures()
 
+    #Select features by expression
+    def selectByExpression(self, expression):
+        return self.vector.selectByExpression(expression)
+
     #change style of layer by rules
     def styleByRules(self, rules):
         symbol = QgsSymbol.defaultSymbol(self.vector.geometryType())
@@ -134,7 +139,7 @@ class QgsLayer:
         renderer = QgsRuleBasedRenderer(symbol)
         self.vector.setRenderer(renderer)
 
-    #Calcul the length of each features of layer
+    #Add the length of each features of layer
     def addLengthFeat(self):
         self.vector.startEditing()
         caps = self.vector.dataProvider().capabilities()
@@ -151,6 +156,30 @@ class QgsLayer:
                 fid = feature.id()
                 flen = feature.geometry().length()
                 self.vector.changeAttributeValue(fid, idx, flen)
+        self.vector.commitChanges()
+
+    #Add an unique ID of each features of layer
+    def addUniqueID(self):
+        caps = self.vector.dataProvider().capabilities()
+        field = QgsField('newID', QVariant.Int, "Int")
+
+        self.vector.startEditing()
+        if caps & QgsVectorDataProvider.AddAttributes:
+            self.vector.dataProvider().addAttributes([field])
+        self.vector.updateFields()
+
+        id = self.vector.dataProvider().fieldNameIndex('newID')
+        self.vector.commitChanges()
+
+        count=1
+        self.vector.startEditing()
+        # fill the field ID with rownumber
+        for f in self.vector.getFeatures():
+            rownum = count
+            count+=1
+            f[id]=rownum
+            self.vector.updateFeature(f)
+
         self.vector.commitChanges()
 
     #Get all the features of a field
@@ -198,6 +227,21 @@ class QgsLayer:
     def setLabel(self, choix):
         self.vector.setLabelsEnabled(choix)
         self.vector.triggerRepaint()
+
+    #Projecto layer to Lambert93
+    def projectionLT93(self, output_path):
+        parameters = {'INPUT': self.vector, 'TARGET_CRS': 'EPSG:2154', 'OUTPUT': output_path}
+        processing.run("qgis:reprojectlayer", parameters)
+        return QgsLayer(output_path, self.name+"_LT93")
+
+    #Remove features of a layer by an expression
+    def removeFeaturesByExpression(self, expression):
+        with edit(self.vector):
+            request = QgsFeatureRequest().setFilterExpression(expression)
+            request.setSubsetOfAttributes([])
+            request.setFlags(QgsFeatureRequest.NoGeometry)
+            for f in self.vector.getFeatures(request):
+                self.vector.deleteFeature(f.id())
 
     """class functions"""
     #return layer by his name
@@ -250,3 +294,4 @@ class QgsLayer:
 
         source_layer.styleByRules(rules)
         csv_feats = csv_layer.getFeatures()
+    
