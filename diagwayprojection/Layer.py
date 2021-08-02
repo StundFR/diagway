@@ -178,7 +178,7 @@ class QgsLayer:
         buffer_settings = QgsTextBufferSettings()
         buffer_settings.setEnabled(True)
         buffer_settings.setSize(0.05)
-        buffer_settings.setColor(color)
+        buffer_settings.setColor(QColor("Black"))
 
         text_format.setBuffer(buffer_settings)
 
