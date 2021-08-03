@@ -4,9 +4,11 @@ from .Layer import QgsLayer
 from .Tools import *
 import traceback
 
+LAYER_STATEMENT_NAME = "Statement_source"
+
 class WorkerAuto(QtCore.QObject):
     """Constructor & Variables"""
-    finished = QtCore.pyqtSignal(str)
+    finished = QtCore.pyqtSignal(str, str, str)
     error = QtCore.pyqtSignal(Exception, str)
 
     def __init__(self, layer_source, layer_dest, source_value, field_source, field_dest, buffer_distance, precision):
@@ -31,20 +33,22 @@ class WorkerAuto(QtCore.QObject):
 
             #Create the line wich be put in the lineEdit
             line = ""
+            print(dest_value)
             for value in dest_value:
                 line += str(value) + ";"
             line = line[:-1]
+            print(line)
 
             #Create expression for rules styles
-            expression_source = expressionFromFields(self.field_dest, line)
-            expression_dest = expressionFromFields(self.field_source, self.source_value)
+            expression_dest = expressionFromFields(self.field_dest, line)
+            expression_source = expressionFromFields(self.field_source, self.source_value)
 
             destination_rules = (
-                ("Destinations", expression_source, QColor(65,105,225)), #Blue
+                ("Destinations", expression_dest, QColor(65,105,225)), #Blue
                 ("Other", "ELSE", QColor(139,69,19)) #Brown
             )
             source_rules = (
-                ("source", expression_dest, QColor(255,215,0)), #Gold
+                ("source", expression_source, QColor(255,215,0)), #Gold
                 ("Other", "ELSE", QColor("orange"))
             )
 
@@ -52,9 +56,9 @@ class WorkerAuto(QtCore.QObject):
             self.layer_source.styleByRules(source_rules)
 
             #Filter the layer for the zoom at the end
-            self.layer_dest.filter(expression_source)
+            self.layer_source.filter(expression_source)
 
-            layer_statement = QgsLayer.findLayerByName("Statement_source")
+            layer_statement = QgsLayer.findLayerByName(LAYER_STATEMENT_NAME)
             layer_statement.setVisibility(False)
             self.layer_source.setVisibility(True)
             self.layer_dest.setVisibility(True)
@@ -63,4 +67,4 @@ class WorkerAuto(QtCore.QObject):
             line = ""
             self.error.emit(e, traceback.format_exc())
             
-        self.finished.emit(line)
+        self.finished.emit(line, expression_source, expression_dest)

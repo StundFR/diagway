@@ -2,10 +2,12 @@ from qgis import processing
 from qgis.core import QgsVectorFileWriter
 from os import mkdir
 import shutil
-from random import random
 import tempfile
 
 from .Layer import QgsLayer
+
+LAYER_STATEMENT_NAME = "Statement_source"
+DIR_NAME = "/diagwayProjectionTmpLayer"
 
 #Delete duplicate value in list
 def supprDouble(list):
@@ -20,7 +22,7 @@ def createDir(path_dir):
     try:
         mkdir(path_dir)
     except FileExistsError:
-        print("Directory already exists")
+        #print("Directory already exists")
         pass
 
 #Remove a directory
@@ -160,10 +162,9 @@ def createLayerStyleByCSV(csv_path):
     csv_layer = QgsLayer(csv_path, "")
     csv_layer.refresh()
 
-    layer_statement = QgsLayer.findLayerByName("Statement_source")
+    layer_statement = QgsLayer.findLayerByName(LAYER_STATEMENT_NAME)
 
     QgsLayer.styleByCSV(layer_statement, csv_path)
-    layer_statement.setVisibility(True)
 
     return layer_statement
 
@@ -229,6 +230,7 @@ def intersect(layer_source, layer_dest, precision, path_output, source_value):
 #Get the path of temporary files
 def getPath():
     path_temp = tempfile.gettempdir()
-    path_dir = path_temp + "/diagwayProjectionTmpLayer"
+    path_dir = path_temp + DIR_NAME
     createDir(path_dir)
     return path_dir
+

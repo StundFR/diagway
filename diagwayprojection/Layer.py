@@ -5,6 +5,8 @@ from qgis.core.additions.edit import edit
 from PyQt5.QtCore import *
 import os.path
 
+LAYER_STATEMENT_NAME = "Statement_source"
+
 class QgsLayer:
     """Constructor"""
     def __init__(self, path=None, name=None, vectorLayer=None):

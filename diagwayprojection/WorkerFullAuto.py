@@ -3,6 +3,8 @@ from .Layer import QgsLayer
 from .Tools import *
 import traceback
 
+LAYER_STATEMENT_NAME = "Statement_source"
+
 class WorkerFullAuto(QtCore.QObject):
     """Constructor & Variables"""
     finished = QtCore.pyqtSignal(QgsLayer)
