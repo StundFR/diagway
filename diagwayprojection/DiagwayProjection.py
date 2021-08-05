@@ -207,6 +207,8 @@ class DiagwayProjection(QtCore.QObject):
 
     #Get source, destination layer and the CSV path
     def initSourceDestFile(self):
+        path_dir = getPath()
+
         if (self.dockwidget.radio_a.isChecked()):
             self.path_csv = self.dockwidget.lineEdit_file_complete.text()
             layer_source = self.dockwidget.comboBox_layers_source_complete.currentLayer()
@@ -220,9 +222,13 @@ class DiagwayProjection(QtCore.QObject):
         self.layer_dest = QgsLayer(vectorLayer=layer_dest)
 
         if not self.layer_source.isLT93():
-            self.layer_source = self.layer_source.projectionLT93()
+            self.layer_source = self.layer_source.projectionLT93("{}/{}_LT93.shp".format(path_dir, self.layer_source.name))
+            QgsLayer.removeLayersByName(layer_source.name())
+            self.layer_source.add()
         if not self.layer_dest.isLT93():
-            self.layer_dest = self.layer_dest.projectionLT93()
+            self.layer_dest = self.layer_dest.projectionLT93("{}/{}_LT93.shp".format(path_dir, self.layer_dest.name))
+            QgsLayer.removeLayersByName(layer_dest.name())
+            self.layer_dest.add()
         
     #Filled the combo box fields
     def fillFields(self, comboBox):
@@ -271,6 +277,7 @@ class DiagwayProjection(QtCore.QObject):
         self.initSourceDestFile()
         self.layer_source.filter("")
         self.layer_dest.filter("")
+        self.dockwidget.checkBox_symbolized_page3.setEnabled(False)
 
         if (self.dockwidget.radio_w.isChecked()):
             field_source = self.dockwidget.comboBox_fields_source.currentText()
@@ -293,8 +300,13 @@ class DiagwayProjection(QtCore.QObject):
             self.dockwidget.label_field_source.setText(label_source)
             self.dockwidget.label_field_dest.setText(label_dest)
 
-        self.layer_source.setSymbol(0.8, QColor("orange"))
-        self.layer_dest.setSymbol(0.8, QColor(139,69,19)) #Brown
+        if self.isSymbolizedChecked():
+            self.layer_source.setSymbol(0.8, QColor("orange"))
+            self.layer_dest.setSymbol(0.8, QColor(139,69,19)) #Brown
+            self.dockwidget.checkBox_symbolized_page3.setChecked(True)
+        else:
+            self.dockwidget.checkBox_symbolized_page3.setChecked(False)
+        self.dockwidget.checkBox_symbolized_page3.setEnabled(True)
 
         self.layer_source.labeling(10, field_source, QColor("orange"))
         self.layer_dest.labeling(10, field_dest, QColor(139,69,19)) #Brown
@@ -312,6 +324,8 @@ class DiagwayProjection(QtCore.QObject):
         layer_statement.setVisibility(False)
 
         QgsLayer.styleByCSV(layer_statement, self.path_csv)
+
+        self.dockwidget.checkBox_symbolized_page3.enabled = True
             
     #Check if all parameters are goods for the auto button
     def checkAutoButton(self):
@@ -476,6 +490,16 @@ class DiagwayProjection(QtCore.QObject):
             self.iface.messageBar().pushMessage("Error", "Incorrect source value", level=1, duration=4)
         self.layer_source.filter("")
 
+    def isSymbolizedChecked(self):
+        if self.dockwidget.checkBox_symbolized_page3.isEnabled():
+            return self.dockwidget.checkBox_symbolized_page3.isChecked()
+        else:
+            if self.dockwidget.radio_a.isChecked():
+                return self.dockwidget.checkBox_symbolized_complete.isChecked()
+            elif self.dockwidget.radio_w.isChecked():
+                return self.dockwidget.checkBox_symbolized_create.isChecked()
+            else:
+                return False
     #--------------------------------------------------------------------------
     """Algo Multithreading"""
     """Auto function"""
@@ -485,7 +509,8 @@ class DiagwayProjection(QtCore.QObject):
         source_value = self.dockwidget.lineEdit_fields_source.text()
         buffer_distance = int(self.dockwidget.lineEdit_buffer_distance.text())
         precision = float(self.dockwidget.lineEdit_precision.text())/100
-        worker = WorkerAuto(self.layer_source, self.layer_dest, source_value, field_source, field_dest, buffer_distance, precision)
+        auto_symbol = self.isSymbolizedChecked()
+        worker = WorkerAuto(self.layer_source, self.layer_dest, source_value, field_source, field_dest, buffer_distance, precision, auto_symbol)
 
         # configure the QgsMessageBar
         messageBar = self.iface.messageBar().createMessage('Running...', )

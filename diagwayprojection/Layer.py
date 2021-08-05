@@ -193,8 +193,8 @@ class QgsLayer:
         return feats
 
     #Export layer
-    def export(self, output_path):
-        writer = QgsVectorFileWriter.writeAsVectorFormat(self.vector, output_path, 'UTF-8', self.vector.sourceCrs(), 'ESRI Shapefile')
+    def export(self, path_output):
+        writer = QgsVectorFileWriter.writeAsVectorFormat(self.vector, path_output, 'UTF-8', self.vector.sourceCrs(), 'ESRI Shapefile')
         del(writer)
 
     #Add label
@@ -231,10 +231,13 @@ class QgsLayer:
         self.vector.triggerRepaint()
 
     #Projecto layer to Lambert93
-    def projectionLT93(self, output_path):
-        parameters = {'INPUT': self.vector, 'TARGET_CRS': 'EPSG:2154', 'OUTPUT': output_path}
+    def projectionLT93(self, path_output):
+        if (os.path.isfile(path_output)):
+            return QgsLayer(path_output, "{}_LT93".format(self.name))
+
+        parameters = {'INPUT': self.vector, 'TARGET_CRS': 'EPSG:2154', 'OUTPUT': path_output}
         processing.run("qgis:reprojectlayer", parameters)
-        return QgsLayer(output_path, self.name+"_LT93")
+        return QgsLayer(path_output, self.name+"_LT93")
 
     #Remove features of a layer by an expression
     def removeFeaturesByExpression(self, expression):

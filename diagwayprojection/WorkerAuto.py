@@ -11,7 +11,7 @@ class WorkerAuto(QtCore.QObject):
     finished = QtCore.pyqtSignal(str, str, str)
     error = QtCore.pyqtSignal(Exception, str)
 
-    def __init__(self, layer_source, layer_dest, source_value, field_source, field_dest, buffer_distance, precision):
+    def __init__(self, layer_source, layer_dest, source_value, field_source, field_dest, buffer_distance, precision, auto_symbol):
         QtCore.QObject.__init__(self)
         self.layer_source = layer_source
         self.layer_dest = layer_dest
@@ -20,6 +20,7 @@ class WorkerAuto(QtCore.QObject):
         self.field_dest = field_dest
         self.buffer_distance = buffer_distance
         self.precision = precision
+        self.auto_symbol = auto_symbol
     #--------------------------------------------------------------------------
 
     """Function for the algorithm"""
@@ -33,27 +34,26 @@ class WorkerAuto(QtCore.QObject):
 
             #Create the line wich be put in the lineEdit
             line = ""
-            print(dest_value)
             for value in dest_value:
                 line += str(value) + ";"
             line = line[:-1]
-            print(line)
 
             #Create expression for rules styles
             expression_dest = expressionFromFields(self.field_dest, line)
             expression_source = expressionFromFields(self.field_source, self.source_value)
 
-            destination_rules = (
-                ("Destinations", expression_dest, QColor(65,105,225)), #Blue
-                ("Other", "ELSE", QColor(139,69,19)) #Brown
-            )
-            source_rules = (
-                ("source", expression_source, QColor(255,215,0)), #Gold
-                ("Other", "ELSE", QColor("orange"))
-            )
+            if self.auto_symbol:
+                destination_rules = (
+                    ("Destinations", expression_dest, QColor(65,105,225)), #Blue
+                    ("Other", "ELSE", QColor(139,69,19)) #Brown
+                )
+                source_rules = (
+                    ("source", expression_source, QColor(255,215,0)), #Gold
+                    ("Other", "ELSE", QColor("orange"))
+                )
 
-            self.layer_dest.styleByRules(destination_rules)
-            self.layer_source.styleByRules(source_rules)
+                self.layer_dest.styleByRules(destination_rules)
+                self.layer_source.styleByRules(source_rules)
 
             #Filter the layer for the zoom at the end
             self.layer_source.filter(expression_source)

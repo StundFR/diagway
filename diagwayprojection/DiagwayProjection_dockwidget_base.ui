@@ -385,6 +385,18 @@
          </spacer>
         </item>
         <item>
+         <widget class="QCheckBox" name="checkBox_symbolized_create">
+          <property name="font">
+           <font>
+            <pointsize>11</pointsize>
+           </font>
+          </property>
+          <property name="text">
+           <string>Automatic symbolized</string>
+          </property>
+         </widget>
+        </item>
+        <item>
          <widget class="QPushButton" name="push_next">
           <property name="enabled">
            <bool>false</bool>
@@ -720,6 +732,18 @@
          </spacer>
         </item>
         <item>
+         <widget class="QCheckBox" name="checkBox_symbolized_complete">
+          <property name="font">
+           <font>
+            <pointsize>11</pointsize>
+           </font>
+          </property>
+          <property name="text">
+           <string>Automatic symbolized</string>
+          </property>
+         </widget>
+        </item>
+        <item>
          <widget class="QPushButton" name="push_next_complete">
           <property name="enabled">
            <bool>false</bool>
@@ -910,6 +934,21 @@
            </spacer>
           </item>
          </layout>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="checkBox_symbolized_page3">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
+          <property name="font">
+           <font>
+            <pointsize>11</pointsize>
+           </font>
+          </property>
+          <property name="text">
+           <string>Automatic symbolized</string>
+          </property>
+         </widget>
         </item>
         <item>
          <layout class="QHBoxLayout" name="horizontalLayout_16">
@@ -1235,19 +1274,14 @@
          </spacer>
         </item>
        </layout>
-       <zorder>push_auto</zorder>
        <zorder>push_add</zorder>
        <zorder>push_cancel_3</zorder>
-       <zorder>push_fullauto</zorder>
        <zorder>verticalSpacer_5</zorder>
-       <zorder>push_switch</zorder>
-       <zorder>lineEdit_fields_source</zorder>
        <zorder>lineEdit_fields_dest</zorder>
        <zorder>verticalSpacer_2</zorder>
        <zorder>verticalSpacer_6</zorder>
        <zorder>verticalSpacer_7</zorder>
-       <zorder>push_clear</zorder>
-       <zorder>push_zoom_source</zorder>
+       <zorder>checkBox_symbolized_page3</zorder>
       </widget>
      </widget>
     </item>
