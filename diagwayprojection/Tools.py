@@ -146,6 +146,21 @@ def projection(layer_source, layer_dest, source_value, field_source, field_dest,
 
     return supprDouble(dest_values)
 
+#Sort features by their position, West to east
+def sortFeaturesByGeom(layer, values, field):
+    feats = layer.getFeaturesOrderByField("geom", True)
+    res = []
+    
+    for feat in feats:
+        try:
+            value = feat[field]
+        except KeyError:
+            value = feat[field[:-2]]
+        if  value in values:
+            res.append(value)
+
+    return res
+    
 #Add line in CSV file
 def addLineCSV(csv_path, source_value, destination_value):
     duplicateLine = duplicateLineCSV(csv_path, source_value)

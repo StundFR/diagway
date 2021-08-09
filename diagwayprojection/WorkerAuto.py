@@ -30,11 +30,12 @@ class WorkerAuto(QtCore.QObject):
     """Run"""
     def run(self):
         try:
-            dest_value = projection(self.layer_source, self.layer_dest, self.source_value, self.field_source, self.field_dest, self.buffer_distance, self.precision)
+            dest_values = projection(self.layer_source, self.layer_dest, self.source_value, self.field_source, self.field_dest, self.buffer_distance, self.precision)
+            dest_values = sortFeaturesByGeom(self.layer_dest, dest_values, self.field_dest)
 
             #Create the line wich be put in the lineEdit
             line = ""
-            for value in dest_value:
+            for value in dest_values:
                 line += str(value) + ";"
             line = line[:-1]
 

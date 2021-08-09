@@ -110,6 +110,14 @@ class QgsLayer:
     def getFeatures(self):
         return self.vector.getFeatures()
 
+    #get features of layer order by field
+    def getFeaturesOrderByField(self, field, ascending):
+        request = QgsFeatureRequest()
+        clause = QgsFeatureRequest.OrderByClause(field, ascending=ascending)
+        orderby = QgsFeatureRequest.OrderBy([clause])
+        request.setOrderBy(orderby)
+        return self.vector.getFeatures(request)
+
     #return selected features
     def selectedFeatures(self):
         return self.vector.selectedFeatures()

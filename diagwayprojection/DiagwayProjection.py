@@ -321,6 +321,7 @@ class DiagwayProjection(QtCore.QObject):
         QgsLayer.removeLayersByName(LAYER_STATEMENT_NAME)
 
         layer_statement.add()
+        layer_statement.labeling(10, field_source, QColor("green"))
         layer_statement.setVisibility(False)
 
         QgsLayer.styleByCSV(layer_statement, self.path_csv)
@@ -384,7 +385,10 @@ class DiagwayProjection(QtCore.QObject):
             label_dest = self.dockwidget.label_field_dest.text()[:-2]
             destination_feats = self.layer_dest.selectedFeatures()
             for f in destination_feats:
-                fields_dest += str(f[label_dest]) + ";"
+                try:
+                    fields_dest += str(f[label_dest]) + ";"
+                except KeyError:
+                    fields_dest += str(f[label_dest][:-2]) + ";"
 
         fields_source = fields_source[:-1]
         fields_dest = fields_dest[:-1]
