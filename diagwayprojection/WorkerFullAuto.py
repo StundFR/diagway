@@ -76,9 +76,6 @@ class WorkerFullAuto(QtCore.QObject):
                 count_progress += 1
                 self.progress.emit(count_progress*100/length)
 
-            self.layer_source.setVisibility(False)
-            self.layer_dest.setVisibility(False)
-
             layer_statement = createLayerStyleByCSV(self.path_csv)
 
             #Clear filter 

@@ -1,6 +1,6 @@
 from qgis import processing
 from qgis.core import QgsVectorFileWriter
-from os import mkdir
+from os import mkdir, path
 import shutil
 import tempfile
 
@@ -73,8 +73,9 @@ def removeLineFile(path_file, nLine):
 
 #Extract by location proccesing, parameters : contains
 def extractByLocation(layer_source, layer_dest, path_output):
-    parameters = {'INPUT' : layer_source.vector, 'PREDICATE' : 6, 'INTERSECT' : layer_dest.vector, 'OUTPUT' : path_output}
-    processing.run("qgis:extractbylocation", parameters)
+    if (not path.isfile(path_output)):
+        parameters = {'INPUT' : layer_source.vector, 'PREDICATE' : 6, 'INTERSECT' : layer_dest.vector, 'OUTPUT' : path_output}
+        processing.run("qgis:extractbylocation", parameters)
 
 #Calcul projection for source layer
 def getDestBySource(layer_source, layer_dest, source_value, field_source, field_dest, buffer_distance, precision):
@@ -82,8 +83,8 @@ def getDestBySource(layer_source, layer_dest, source_value, field_source, field_
     path_dir = getPath()
 
     source = str(source_value).replace("/", "")
-    path_buffer = path_dir +"/buffer_{}_{}.shp".format(layer_source.name, source)
-    path_extract = path_dir +"/getDestBySource_extract_{}_{}.shp".format(layer_source.name, source)
+    path_buffer = "{}/buffer_BD{}_LS{}_FS{}_SV{}.shp".format(path_dir, buffer_distance, layer_source.name.replace(".", ""), field_source, source)
+    path_intersect = "{}/intersect_EPS{}_BD{}_LS{}_FS{}_SV{}_LD{}_FD{}.shp".format(path_dir, precision, buffer_distance, layer_source.name.replace(".", ""), field_source, source, layer_dest.name.replace(".", ""), field_dest)
 
     if (type(source_value) is str):
         expression = "\"{}\" = '{}'".format(field_source, source_value)
@@ -95,16 +96,13 @@ def getDestBySource(layer_source, layer_dest, source_value, field_source, field_
 
     layer_buffer = layer_source.buffer(buffer_distance, path_buffer)
 
-    layer_res = intersect(layer_dest, layer_buffer, precision, path_extract, source_value)
+    layer_res = intersect(layer_dest, layer_buffer, precision, path_intersect)
 
     #Get destinations
     layer_res_feats = layer_res.getFeatures()
     dest_values = []
     for feat in layer_res_feats:
-        try:
-            dest_values.append(str(feat[field_dest]))
-        except KeyError:
-            dest_values.append(str(feat[field_dest[:-2]]))
+        dest_values.append(str(feat[field_dest]))
 
     return dest_values
 
@@ -113,20 +111,18 @@ def getDestByDest(layer_source, layer_dest, source_value, field_source, field_de
     path_dir = getPath()
 
     source = str(source_value).replace("/", "")
-    path_buffer = "{}/buffer_{}_{}.shp".format(path_dir,  layer_dest.name, source)
+    path_buffer = "{}/buffer_BD{}_LS{}_FS{}_SV{}.shp".format(path_dir, buffer_distance, layer_source.name.replace(".", ""), field_source, source)
     layer_buffer_source = layer_source.buffer(buffer_distance, path_buffer)
 
-    path_extract = "{}/getDestByDest_extract_{}_{}.shp".format(path_dir,  layer_dest.name, source)
-    clip(layer_dest, layer_buffer_source, path_extract)
-    layer_extract = QgsLayer(path_extract, "")
+    path_clip = "{}/clip_LS{}_LD{}.shp".format(path_dir, layer_dest.name.replace(".", ""), getNameFromPath(path_buffer))
+    clip(layer_dest, layer_buffer_source, path_clip)
+    layer_extract = QgsLayer(path_clip, getNameFromPath(path_clip))
 
     field_values = []
     layer_extract_feats = layer_extract.getFeatures()
     for feat in layer_extract_feats:
-        try:
-            field_values.append(str(feat[field_dest]))
-        except KeyError:
-            field_values.append(str(feat[field_dest[:-2]]))
+        field_values.append(str(feat[field_dest]))
+
 
     dest_values = []
     for value in field_values:
@@ -139,9 +135,9 @@ def getDestByDest(layer_source, layer_dest, source_value, field_source, field_de
 
 #Project source layer on destination layer
 def projection(layer_source, layer_dest, source_value, field_source, field_dest, buffer_distance, precision):
-
     dest_values = getDestBySource(layer_source, layer_dest, source_value, field_source, field_dest, buffer_distance, precision)
     dest_values += getDestByDest(layer_source, layer_dest, source_value, field_source, field_dest, buffer_distance, precision, dest_values)
+    layer_source.filter("")
     layer_dest.filter("")
 
     return supprDouble(dest_values)
@@ -185,35 +181,42 @@ def createLayerStyleByCSV(csv_path):
 
 #merged list of layers
 def mergeLayers(layers, path_output):
-    parameters = {'LAYERS': layers, 'CRS': 'EPSG:4326', 'OUTPUT': path_output}
-    processing.run("native:mergevectorlayers", parameters) 
+    if (not path.isfile(path_output)):
+        parameters = {'LAYERS': layers, 'CRS': 'EPSG:4326', 'OUTPUT': path_output}
+        processing.run("native:mergevectorlayers", parameters) 
 
 #Difference processing
 def difference(layer_source, layer_dest, path_output):
-    parameters = {"INPUT" : layer_source.vector, "OVERLAY" : layer_dest.vector, "OUTPUT" : path_output}
-    processing.run("qgis:difference", parameters)
+    if (not path.isfile(path_output)):
+        parameters = {"INPUT" : layer_source.vector, "OVERLAY" : layer_dest.vector, "OUTPUT" : path_output}
+        processing.run("qgis:difference", parameters)
 
 #Clip processing
 def clip(layer_source, layer_dest, path_output):
-    parameters = {"INPUT" : layer_source.vector, "OVERLAY" : layer_dest.vector, "OUTPUT" : path_output}
-    processing.run("qgis:clip", parameters)
+    if (not path.isfile(path_output)):
+        parameters = {"INPUT" : layer_source.vector, "OVERLAY" : layer_dest.vector, "OUTPUT" : path_output}
+        processing.run("qgis:clip", parameters)
 
 #Extract by location, parameters : intersect
 def extractByLocationIntersect(layer_source, layer_dest, path_output):
-    parameters = {'INPUT' : layer_source.vector, 'PREDICATE' : 0, 'INTERSECT' : layer_dest.vector, 'OUTPUT' : path_output}
-    processing.run("qgis:extractbylocation", parameters)
+    if (not path.isfile(path_output)):
+        parameters = {'INPUT' : layer_source.vector, 'PREDICATE' : 0, 'INTERSECT' : layer_dest.vector, 'OUTPUT' : path_output}
+        processing.run("qgis:extractbylocation", parameters)
 
 #Works like extract by location, parameters : contains, with a precision 
-def intersect(layer_source, layer_dest, precision, path_output, source_value):
+def intersect(layer_source, layer_dest, precision, path_output):
+    if (path.isfile(path_output)):
+        return QgsLayer(path_output, getNameFromPath(path_output))
+
     path_dir = getPath()
 
-    path_clip = path_dir + "/intersect_clip_{}_{}.shp".format(layer_source.name, source_value)
+    path_clip = "{}/clip_LS{}_LD{}.shp".format(path_dir, layer_source.name.replace(".", ""), layer_dest.name.replace(".", ""))
     clip(layer_source, layer_dest, path_clip)
-    layer_clip = QgsLayer(path_clip, "layer_clip")
+    layer_clip = QgsLayer(path_clip, getNameFromPath(path_clip))
 
-    path_extract = path_dir + "/intersect_extract_{}_{}.shp".format(layer_source.name, source_value)
+    path_extract = "{}/extract_LS{}_LD{}.shp".format(path_dir, layer_source.name.replace(".", ""), layer_dest.name.replace(".", ""))
     extractByLocationIntersect(layer_source, layer_dest, path_extract)
-    layer_extract = QgsLayer(path_extract, "layer_extract")
+    layer_extract = QgsLayer(path_extract, getNameFromPath(path_extract))
 
     layer_clip.addLengthFeat()
     layer_extract.addLengthFeat()
@@ -240,7 +243,7 @@ def intersect(layer_source, layer_dest, precision, path_output, source_value):
     writer = QgsVectorFileWriter.writeAsVectorFormat(layer_extract.vector, path_output, "utf-8", layer_extract.vector.sourceCrs(), "ESRI Shapefile", onlySelected=True)
     del(writer)
 
-    return QgsLayer(path_output, "{}_intersect_{}".format(layer_source.name, layer_dest.name))
+    return QgsLayer(path_output, getNameFromPath(path_output))
 
 #Get the path of temporary files
 def getPath():

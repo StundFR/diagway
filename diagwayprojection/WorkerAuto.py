@@ -4,8 +4,6 @@ from .Layer import QgsLayer
 from .Tools import *
 import traceback
 
-LAYER_STATEMENT_NAME = "Statement_source"
-
 class WorkerAuto(QtCore.QObject):
     """Constructor & Variables"""
     finished = QtCore.pyqtSignal(str, str, str)
@@ -55,15 +53,6 @@ class WorkerAuto(QtCore.QObject):
 
                 self.layer_dest.styleByRules(destination_rules)
                 self.layer_source.styleByRules(source_rules)
-
-            #Filter the layer for the zoom at the end
-            self.layer_source.filter(expression_source)
-
-            layer_statement = QgsLayer.findLayerByName(LAYER_STATEMENT_NAME)
-            layer_statement.setVisibility(False)
-            self.layer_source.setVisibility(True)
-            self.layer_dest.setVisibility(True)
-            
         except Exception as e:
             line = ""
             self.error.emit(e, traceback.format_exc())

@@ -1,7 +1,9 @@
+from os import path
 from qgis.core import QgsVectorLayer, QgsVectorFileWriter, QgsWkbTypes, QgsProject, QgsRuleBasedRenderer, QgsSymbol, QgsVectorDataProvider, QgsField, QgsPalLayerSettings, QgsTextFormat, QgsTextBufferSettings,QgsVectorLayerSimpleLabeling, QgsFeatureRequest
 from qgis.PyQt.QtGui import QColor, QFont
 from qgis import processing
 from qgis.core.additions.edit import edit
+
 from PyQt5.QtCore import *
 import os.path
 
@@ -53,22 +55,23 @@ class QgsLayer:
         canvas.setExtent(self.vector.extent())
 
     #create a buffer for a layer
-    def buffer(self, buffer_distance, buffer_path):
-        buffer_name = "{}_buffer".format(self.name)
+    def buffer(self, buffer_distance, path_buffer):
+        from .Tools import getNameFromPath
+        buffer_name = getNameFromPath(path_buffer)
 
-        if (os.path.isfile(buffer_path)):
-            return QgsLayer(buffer_path, buffer_name)
+        if (os.path.isfile(path_buffer)):
+            return QgsLayer(path_buffer, buffer_name)
 
         source_layer_feats = self.vector.getFeatures()
         source_layer_fields = self.vector.fields()
-        writer = QgsVectorFileWriter(buffer_path, 'UTF-8',  source_layer_fields, QgsWkbTypes.Polygon, self.vector.sourceCrs(), 'ESRI Shapefile')
+        writer = QgsVectorFileWriter(path_buffer, 'UTF-8',  source_layer_fields, QgsWkbTypes.Polygon, self.vector.sourceCrs(), 'ESRI Shapefile')
         for feat in source_layer_feats:
             geom = feat.geometry()
             buffer = geom.buffer(buffer_distance, 5)
             feat.setGeometry(buffer)
             writer.addFeature(feat)
         del(writer)
-        return QgsLayer(buffer_path, buffer_name)
+        return QgsLayer(path_buffer, buffer_name)
 
     #refresh data of layer
     def refresh(self):
@@ -245,6 +248,7 @@ class QgsLayer:
 
         parameters = {'INPUT': self.vector, 'TARGET_CRS': 'EPSG:2154', 'OUTPUT': path_output}
         processing.run("qgis:reprojectlayer", parameters)
+
         return QgsLayer(path_output, self.name+"_LT93")
 
     #Remove features of a layer by an expression
@@ -255,6 +259,21 @@ class QgsLayer:
             request.setFlags(QgsFeatureRequest.NoGeometry)
             for f in self.vector.getFeatures(request):
                 self.vector.deleteFeature(f.id())
+
+    #Rename field name
+    def renameField(self, oldname, newname):
+        findex = self.vector.dataProvider().fieldNameIndex(oldname)
+        if findex != -1:
+            self.vector.dataProvider().renameAttributes({findex: newname})
+            self.vector.updateFields()
+
+
+    def isFieldExist(self, field):
+        findex = self.vector.dataProvider().fieldNameIndex(field)
+        if findex == -1:
+            return False
+        else:
+            return True
 
     """class functions"""
     #return layer by his name

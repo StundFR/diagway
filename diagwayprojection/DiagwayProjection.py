@@ -21,6 +21,7 @@
  *                                                                         *
  ***************************************************************************/
 """
+from os import error
 from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, Qt
 from qgis.PyQt.QtGui import QIcon, QColor
 from qgis.PyQt.QtWidgets import QAction, QFileDialog, QProgressBar, QPushButton
@@ -47,6 +48,7 @@ class DiagwayProjection(QtCore.QObject):
         self.layer_source = None
         self.layer_dest = None
         self.path_csv = None
+        self.database = None
 
         # Save reference to the QGIS interface
         self.iface = iface
@@ -213,13 +215,26 @@ class DiagwayProjection(QtCore.QObject):
             self.path_csv = self.dockwidget.lineEdit_file_complete.text()
             layer_source = self.dockwidget.comboBox_layers_source_complete.currentLayer()
             layer_dest = self.dockwidget.comboBox_layers_dest_complete.currentLayer()
+
+            with open(self.path_csv, "r") as csv:
+                header = csv.readline()
+
+            self.field_source, self.field_dest = header.split(";")
+            self.field_dest = self.field_dest[:-1]
         else:
             self.path_csv = self.dockwidget.lineEdit_file.text()
             layer_source = self.dockwidget.comboBox_layers_source.currentLayer()
             layer_dest = self.dockwidget.comboBox_layers_dest.currentLayer()
+            self.field_source = self.dockwidget.comboBox_fields_source.currentText()
+            self.field_dest = self.dockwidget.comboBox_fields_dest.currentText()
 
         self.layer_source = QgsLayer(vectorLayer=layer_source)
         self.layer_dest = QgsLayer(vectorLayer=layer_dest)
+
+        try:
+            self.database = self.layer_source.path.split("'")[1]
+        except:
+            pass
 
         if not self.layer_source.isLT93():
             self.layer_source = self.layer_source.projectionLT93("{}/{}_LT93.shp".format(path_dir, self.layer_source.name))
@@ -229,7 +244,12 @@ class DiagwayProjection(QtCore.QObject):
             self.layer_dest = self.layer_dest.projectionLT93("{}/{}_LT93.shp".format(path_dir, self.layer_dest.name))
             QgsLayer.removeLayersByName(layer_dest.name())
             self.layer_dest.add()
-        
+
+        if not self.layer_source.isFieldExist(self.field_source):
+            self.field_source = self.field_source[:-2]
+        if not self.layer_dest.isFieldExist(self.field_dest):
+            self.field_dest = self.field_dest[:-2]
+
     #Filled the combo box fields
     def fillFields(self, comboBox):
         comboBox.clear()
@@ -280,25 +300,12 @@ class DiagwayProjection(QtCore.QObject):
         self.dockwidget.checkBox_symbolized_page3.setEnabled(False)
 
         if (self.dockwidget.radio_w.isChecked()):
-            field_source = self.dockwidget.comboBox_fields_source.currentText()
-            field_dest = self.dockwidget.comboBox_fields_dest.currentText()
-
-            self.dockwidget.label_field_source.setText(field_source + " :")
-            self.dockwidget.label_field_dest.setText(field_dest + " :")
-
-            line = "{};{}\n".format(field_source, field_dest)
+            line = "{};{}\n".format(self.field_source, self.field_dest)
             with open(self.path_csv, "w") as csv:
                 csv.write(line)
-        else:
-            with open(self.path_csv, "r") as csv:
-                header = csv.readline()
-
-            field_source, field_dest = header.split(";")
-            label_source = field_source + " :"
-            label_dest = field_dest[:-1] + " :"
-
-            self.dockwidget.label_field_source.setText(label_source)
-            self.dockwidget.label_field_dest.setText(label_dest)
+           
+        self.dockwidget.label_field_source.setText(self.field_source + " :")
+        self.dockwidget.label_field_dest.setText(self.field_dest + " :")
 
         if self.isSymbolizedChecked():
             self.layer_source.setSymbol(0.8, QColor("orange"))
@@ -308,8 +315,8 @@ class DiagwayProjection(QtCore.QObject):
             self.dockwidget.checkBox_symbolized_page3.setChecked(False)
         self.dockwidget.checkBox_symbolized_page3.setEnabled(True)
 
-        self.layer_source.labeling(10, field_source, QColor("orange"))
-        self.layer_dest.labeling(10, field_dest, QColor(139,69,19)) #Brown
+        self.layer_source.labeling(10, self.field_source, QColor("orange"))
+        self.layer_dest.labeling(10, self.field_dest, QColor(139,69,19)) #Brown
 
         name = getNameFromPath(self.path_csv)
         QgsLayer.removeLayersByName(name)
@@ -321,7 +328,7 @@ class DiagwayProjection(QtCore.QObject):
         QgsLayer.removeLayersByName(LAYER_STATEMENT_NAME)
 
         layer_statement.add()
-        layer_statement.labeling(10, field_source, QColor("green"))
+        layer_statement.labeling(10, self.field_source, QColor("green"))
         layer_statement.setVisibility(False)
 
         QgsLayer.styleByCSV(layer_statement, self.path_csv)
@@ -376,19 +383,17 @@ class DiagwayProjection(QtCore.QObject):
         fields_dest = ""
         
         if (self.layer_source is not None):
-            label_source = self.dockwidget.label_field_source.text()[:-2]
             feats_source = self.layer_source.selectedFeatures()
             for f in feats_source:
-                fields_source += str(f[label_source]) + ";"
+                fields_source += str(f[self.field_source]) + ";"
 
         if (self.layer_dest is not None):
-            label_dest = self.dockwidget.label_field_dest.text()[:-2]
             destination_feats = self.layer_dest.selectedFeatures()
             for f in destination_feats:
                 try:
-                    fields_dest += str(f[label_dest]) + ";"
+                    fields_dest += str(f[self.field_dest]) + ";"
                 except KeyError:
-                    fields_dest += str(f[label_dest][:-2]) + ";"
+                    fields_dest += str(f[self.field_dest]) + ";"
 
         fields_source = fields_source[:-1]
         fields_dest = fields_dest[:-1]
@@ -430,8 +435,6 @@ class DiagwayProjection(QtCore.QObject):
     #Select entity when you put a value in source lineEdit
     def showField(self):
         textEdit_dest = self.dockwidget.lineEdit_fields_dest
-        field_source = self.dockwidget.label_field_source.text()[:-2]
-        field_dest = self.dockwidget.label_field_dest.text()[:-2]
         field_source_value = self.sender().text()
         
 
@@ -445,8 +448,8 @@ class DiagwayProjection(QtCore.QObject):
                 field_dest_value = line.split("\"")[1]
                 textEdit_dest.setText(field_dest_value)
 
-                expression_dest = "\"{}\" = {}".format(field_source, field_source_value)
-                expression_source = "\"{}\" in ('{}')".format(field_dest, field_dest_value.replace(";", "','"))
+                expression_dest = "\"{}\" = {}".format(self.field_source, field_source_value)
+                expression_source = "\"{}\" in ('{}')".format(self.field_dest, field_dest_value.replace(";", "','"))
 
                 source_statement = QgsLayer.findLayerByName(LAYER_STATEMENT_NAME)
 
@@ -485,8 +488,7 @@ class DiagwayProjection(QtCore.QObject):
     def zoomSource(self):
         
         value = self.dockwidget.lineEdit_fields_source.text()
-        field = self.dockwidget.label_field_source.text()[:-2]
-        expression = "{} = {}".format(field, value)
+        expression = "{} = {}".format(self.field_source, value)
 
         if self.layer_source.filter(expression) and value != "":
             self.layer_source.zoom(self)
@@ -494,6 +496,7 @@ class DiagwayProjection(QtCore.QObject):
             self.iface.messageBar().pushMessage("Error", "Incorrect source value", level=1, duration=4)
         self.layer_source.filter("")
 
+    #Check if automatic symbol is checked
     def isSymbolizedChecked(self):
         if self.dockwidget.checkBox_symbolized_page3.isEnabled():
             return self.dockwidget.checkBox_symbolized_page3.isChecked()
@@ -504,17 +507,126 @@ class DiagwayProjection(QtCore.QObject):
                 return self.dockwidget.checkBox_symbolized_create.isChecked()
             else:
                 return False
+    
+    
+    def calculDistance(self):
+        import psycopg2
+        import csv
+
+        print("début")
+
+        re_geneger = True
+
+        HOST = "localhost"
+        USER = "diagway"
+        PASSWORD = "diagway"
+        DATABASE = self.database
+
+
+        # Open connection
+        conn = psycopg2.connect("host=%s dbname=%s user=%s password=%s" % (HOST, DATABASE, USER, PASSWORD))
+        cur = conn.cursor()
+
+
+        if re_geneger:
+            strSqlQuery = "DROP TABLE IF EXISTS  cores.terrain_client"
+            cur.execute(strSqlQuery)
+            
+            strSqlQuery = "CREATE TABLE cores.terrain_client (troncon_id integer,route_client text, cumuld_client numeric,cumulf_client numeric)"
+            cur.execute(strSqlQuery)
+            
+            strSqlQuery = "DROP TABLE IF EXISTS cores.client_terrain"
+            cur.execute(strSqlQuery)
+            
+            strSqlQuery = "CREATE TABLE cores.client_terrain (gid serial,route_client text,type_troncon text,geom_client geometry(LineStringM,2154),point_deb_client geometry(PointM,2154),point_fin_client geometry(PointM,2154),longueur_client numeric,troncon_id integer,cumuld_troncon numeric,cumulf_troncon numeric,longueur_terrain numeric,ecart numeric, sens_ausc integer, a_verifier boolean,CONSTRAINT client_terrain_pkey PRIMARY KEY (gid))"
+            cur.execute(strSqlQuery)
+
+
+
+
+            strSqlQueryInsertTerrainClient = """INSERT INTO cores.terrain_client (troncon_id,route_client) VALUES(%s,%s)"""
+            strstrSqlQueryInsertClientTerrain = """INSERT INTO cores.client_terrain (route_client,troncon_id) VALUES(%s,%s)"""
+
+
+
+
+
+            with open(self.path_csv, newline='') as csvfile:
+                reader = csv.DictReader(csvfile,delimiter=';')
+                for row in reader:
+                    sta_id=row[self.field_source]
+                    for route_client in (row[self.field_dest]).split(";"):
+                        cur.execute(strSqlQueryInsertTerrainClient,(sta_id,route_client))
+                        cur.execute(strstrSqlQueryInsertClientTerrain,(route_client,sta_id))            
+                        print(sta_id,route_client)
+                conn.commit()
+
+            
+            strSqlQuery = "UPDATE  cores.client_terrain set type_troncon='Route'"
+            cur.execute(strSqlQuery)
+            conn.commit()
+
+            strSqlQuery = "UPDATE  cores.client_terrain t1 set longueur_client = ST_LENGTH(t2.geom) from cores.route_client t2 where t1.route_client = t2.route_client"
+            cur.execute(strSqlQuery)
+            conn.commit()
+
+            strSqlQuery = "Update cores.client_terrain t1 set geom_client = t2.geom from cores.route_client t2 where t1.route_client = t2.route_client"
+            cur.execute(strSqlQuery)
+            conn.commit()
+
+
+
+
+            strSqlQuery = "Update cores.client_terrain set point_deb_client = ST_StartPoint(geom_client),point_fin_client = ST_EndPoint(geom_client)"
+            cur.execute(strSqlQuery)
+            conn.commit()
+            
+            strSqlQuery ="alter table cores.client_terrain add column geom_terrain geometry(MultiLineStringM,2154)"
+            cur.execute(strSqlQuery)
+            
+
+        strSqlQuery ="Update cores.client_terrain t3 set cumuld_troncon = ST_M(ST_LineInterpolatePoint(geom_troncon,ST_LineLocatePoint(geom_troncon,point_deb_client))),  cumulf_troncon = ST_M(ST_LineInterpolatePoint(geom_troncon,ST_LineLocatePoint(geom_troncon,point_fin_client)))      from (    select t1.route_client,t1.geom_client,t1.troncon_id,t2.geom as geom_troncon from cores.client_terrain t1  join cores.stc_voie t2 on t1.troncon_id = t2.sta_id ) r1    where t3.route_client = r1.route_client and t3.troncon_id = r1.troncon_id"
+        cur.execute(strSqlQuery)
+        conn.commit()
+
+        strSqlQuery ="Update cores.client_terrain set longueur_terrain = abs(cumulf_troncon-cumuld_troncon)"
+        cur.execute(strSqlQuery)
+        conn.commit()
+                        
+        strSqlQuery ="Update cores.client_terrain set sens_ausc = CASE When  cumulf_troncon-cumuld_troncon>=0 Then 1 else -1 End"
+        cur.execute(strSqlQuery)
+        conn.commit()
+
+        strSqlQuery ="Update cores.client_terrain set ecart = (longueur_terrain-longueur_client)"
+        cur.execute(strSqlQuery)
+
+
+        strSqlQuery ="Update cores.client_terrain set a_verifier = CASE WHEN abs(longueur_terrain-longueur_client)>=10 then TRUE ELSE FALSE END"
+
+        cur.execute(strSqlQuery)
+        conn.commit()
+
+        strSqlQuery ="Update cores.client_terrain t1 set geom_terrain = ST_LocateBetween(t2.geom,cumuld_troncon,cumulf_troncon) from cores.stc_voie t2 where t1.troncon_id = t2.sta_id"
+        cur.execute(strSqlQuery)
+        conn.commit()
+                
+                
+                
+                
+                
+        conn.close()
+        print("fin")
+
     #--------------------------------------------------------------------------
     """Algo Multithreading"""
     """Auto function"""
     def startAuto(self):
-        field_source = self.dockwidget.label_field_source.text()[:-2]
-        field_dest = self.dockwidget.label_field_dest.text()[:-2]
         source_value = self.dockwidget.lineEdit_fields_source.text()
         buffer_distance = int(self.dockwidget.lineEdit_buffer_distance.text())
         precision = float(self.dockwidget.lineEdit_precision.text())/100
         auto_symbol = self.isSymbolizedChecked()
-        worker = WorkerAuto(self.layer_source, self.layer_dest, source_value, field_source, field_dest, buffer_distance, precision, auto_symbol)
+
+        worker = WorkerAuto(self.layer_source, self.layer_dest, source_value, self.field_source, self.field_dest, buffer_distance, precision, auto_symbol)
 
         # configure the QgsMessageBar
         messageBar = self.iface.messageBar().createMessage('Running...', )
@@ -548,19 +660,15 @@ class DiagwayProjection(QtCore.QObject):
             self.iface.messageBar().pushMessage("Done", "Roads not found", level=4, duration=4)
 
         self.dockwidget.lineEdit_fields_dest.setText(line)
-        self.worker.layer_source.zoom(self)
-        self.worker.layer_source.filter("")
         self.worker.layer_source.selectByExpression(expression_source)
         self.worker.layer_dest.selectByExpression(expression_dest)
 
 
     """Full auto function"""
     def startFullAuto(self):
-        field_source = self.dockwidget.label_field_source.text()[:-2]
-        field_dest = self.dockwidget.label_field_dest.text()[:-2]
         buffer_distance = int(self.dockwidget.lineEdit_buffer_distance.text())
         precision = float(self.dockwidget.lineEdit_precision.text())/100
-        worker = WorkerFullAuto(self.layer_source, self.layer_dest, self.path_csv, field_source, field_dest, buffer_distance, precision)
+        worker = WorkerFullAuto(self.layer_source, self.layer_dest, self.path_csv, self.field_source, self.field_dest, buffer_distance, precision)
 
         # configure the QgsMessageBar
         messageBar = self.iface.messageBar().createMessage('Running...', )
@@ -595,7 +703,6 @@ class DiagwayProjection(QtCore.QObject):
         self.iface.messageBar().popWidget(self.messageBar)
         if layer is not None:
             # report the result
-            layer.zoom(self)
             self.iface.messageBar().pushMessage("Done", "Algorith is finished", level=3, duration=4)
         else:
             # notify the user that something went wrong
@@ -659,6 +766,7 @@ class DiagwayProjection(QtCore.QObject):
                 self.dockwidget.push_switch.clicked.connect(self.switch)
                 self.dockwidget.push_clear.clicked.connect(lambda : self.clearCSV(self.path_csv))
                 self.dockwidget.push_zoom_source.clicked.connect(self.zoomSource)
+                self.dockwidget.push_calcul.clicked.connect(self.calculDistance)
 
                 #Connect lineEdit
                 self.dockwidget.lineEdit_file_complete.textChanged.connect(self.filePreview)
