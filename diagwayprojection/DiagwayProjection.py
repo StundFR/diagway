@@ -48,7 +48,6 @@ class DiagwayProjection(QtCore.QObject):
         self.layer_source = None
         self.layer_dest = None
         self.path_csv = None
-        self.database = None
 
         # Save reference to the QGIS interface
         self.iface = iface
@@ -230,11 +229,6 @@ class DiagwayProjection(QtCore.QObject):
 
         self.layer_source = QgsLayer(vectorLayer=layer_source)
         self.layer_dest = QgsLayer(vectorLayer=layer_dest)
-
-        try:
-            self.database = self.layer_source.path.split("'")[1]
-        except:
-            pass
 
         if not self.layer_source.isLT93():
             self.layer_source = self.layer_source.projectionLT93("{}/{}_LT93.shp".format(path_dir, self.layer_source.name))
@@ -515,21 +509,28 @@ class DiagwayProjection(QtCore.QObject):
 
         print("début")
 
-        re_geneger = True
+        re_geneger = self.dockwidget.checkBox_regenerate.isChecked()
 
-        HOST = "localhost"
-        USER = "diagway"
-        PASSWORD = "diagway"
-        DATABASE = self.database
+        HOST = self.dockwidget.lineEdit_host.text()
+        USER = self.dockwidget.lineEdit_user.text()
+        PASSWORD = self.dockwidget.lineEdit_password.text()
+        DATABASE = self.dockwidget.lineEdit_database.text()
 
 
         # Open connection
-        conn = psycopg2.connect("host=%s dbname=%s user=%s password=%s" % (HOST, DATABASE, USER, PASSWORD))
+        try:
+            conn = psycopg2.connect(host=HOST, dbname=DATABASE, user=USER, password=PASSWORD)
+        except psycopg2.OperationalError as e:
+            self.iface.messageBar().pushMessage("Error", str(e), level=1, duration=8)
+            return 1
         cur = conn.cursor()
 
 
         if re_geneger:
-            strSqlQuery = "DROP TABLE IF EXISTS  cores.terrain_client"
+            strSqlQuery = "DROP TABLE IF EXISTS cores.terrain_client"
+            cur.execute(strSqlQuery)
+
+            strSqlQuery = "CREATE SCHEMA IF NOT EXISTS cores"
             cur.execute(strSqlQuery)
             
             strSqlQuery = "CREATE TABLE cores.terrain_client (troncon_id integer,route_client text, cumuld_client numeric,cumulf_client numeric)"
@@ -541,15 +542,8 @@ class DiagwayProjection(QtCore.QObject):
             strSqlQuery = "CREATE TABLE cores.client_terrain (gid serial,route_client text,type_troncon text,geom_client geometry(LineStringM,2154),point_deb_client geometry(PointM,2154),point_fin_client geometry(PointM,2154),longueur_client numeric,troncon_id integer,cumuld_troncon numeric,cumulf_troncon numeric,longueur_terrain numeric,ecart numeric, sens_ausc integer, a_verifier boolean,CONSTRAINT client_terrain_pkey PRIMARY KEY (gid))"
             cur.execute(strSqlQuery)
 
-
-
-
             strSqlQueryInsertTerrainClient = """INSERT INTO cores.terrain_client (troncon_id,route_client) VALUES(%s,%s)"""
             strstrSqlQueryInsertClientTerrain = """INSERT INTO cores.client_terrain (route_client,troncon_id) VALUES(%s,%s)"""
-
-
-
-
 
             with open(self.path_csv, newline='') as csvfile:
                 reader = csv.DictReader(csvfile,delimiter=';')
@@ -560,13 +554,12 @@ class DiagwayProjection(QtCore.QObject):
                         cur.execute(strstrSqlQueryInsertClientTerrain,(route_client,sta_id))            
                         print(sta_id,route_client)
                 conn.commit()
-
             
-            strSqlQuery = "UPDATE  cores.client_terrain set type_troncon='Route'"
+            strSqlQuery = "UPDATE cores.client_terrain set type_troncon='Route'"
             cur.execute(strSqlQuery)
             conn.commit()
 
-            strSqlQuery = "UPDATE  cores.client_terrain t1 set longueur_client = ST_LENGTH(t2.geom) from cores.route_client t2 where t1.route_client = t2.route_client"
+            strSqlQuery = "UPDATE cores.client_terrain t1 set longueur_client = ST_LENGTH(t2.geom) from cores.route_client t2, cores.terrain_client t3 where t1.route_client = t3.route_client"
             cur.execute(strSqlQuery)
             conn.commit()
 
@@ -574,16 +567,12 @@ class DiagwayProjection(QtCore.QObject):
             cur.execute(strSqlQuery)
             conn.commit()
 
-
-
-
             strSqlQuery = "Update cores.client_terrain set point_deb_client = ST_StartPoint(geom_client),point_fin_client = ST_EndPoint(geom_client)"
             cur.execute(strSqlQuery)
             conn.commit()
             
             strSqlQuery ="alter table cores.client_terrain add column geom_terrain geometry(MultiLineStringM,2154)"
             cur.execute(strSqlQuery)
-            
 
         strSqlQuery ="Update cores.client_terrain t3 set cumuld_troncon = ST_M(ST_LineInterpolatePoint(geom_troncon,ST_LineLocatePoint(geom_troncon,point_deb_client))),  cumulf_troncon = ST_M(ST_LineInterpolatePoint(geom_troncon,ST_LineLocatePoint(geom_troncon,point_fin_client)))      from (    select t1.route_client,t1.geom_client,t1.troncon_id,t2.geom as geom_troncon from cores.client_terrain t1  join cores.stc_voie t2 on t1.troncon_id = t2.sta_id ) r1    where t3.route_client = r1.route_client and t3.troncon_id = r1.troncon_id"
         cur.execute(strSqlQuery)
@@ -600,7 +589,6 @@ class DiagwayProjection(QtCore.QObject):
         strSqlQuery ="Update cores.client_terrain set ecart = (longueur_terrain-longueur_client)"
         cur.execute(strSqlQuery)
 
-
         strSqlQuery ="Update cores.client_terrain set a_verifier = CASE WHEN abs(longueur_terrain-longueur_client)>=10 then TRUE ELSE FALSE END"
 
         cur.execute(strSqlQuery)
@@ -609,10 +597,6 @@ class DiagwayProjection(QtCore.QObject):
         strSqlQuery ="Update cores.client_terrain t1 set geom_terrain = ST_LocateBetween(t2.geom,cumuld_troncon,cumulf_troncon) from cores.stc_voie t2 where t1.troncon_id = t2.sta_id"
         cur.execute(strSqlQuery)
         conn.commit()
-                
-                
-                
-                
                 
         conn.close()
         print("fin")
@@ -756,6 +740,7 @@ class DiagwayProjection(QtCore.QObject):
                 self.dockwidget.push_cancel_create.clicked.connect(lambda : self.dockwidget.stackedWidget.setCurrentIndex(0))
                 self.dockwidget.push_cancel_complete.clicked.connect(lambda : self.dockwidget.stackedWidget.setCurrentIndex(0))
                 self.dockwidget.push_cancel_3.clicked.connect(lambda : self.dockwidget.stackedWidget.setCurrentIndex(0))
+                self.dockwidget.push_cancel_page4.clicked.connect(lambda : self.dockwidget.stackedWidget.setCurrentIndex(3))
                 self.dockwidget.push_file.clicked.connect(self.saveFile)
                 self.dockwidget.push_file_complete.clicked.connect(self.selectFile)
                 self.dockwidget.push_next.clicked.connect(self.setupPage3)
@@ -766,7 +751,8 @@ class DiagwayProjection(QtCore.QObject):
                 self.dockwidget.push_switch.clicked.connect(self.switch)
                 self.dockwidget.push_clear.clicked.connect(lambda : self.clearCSV(self.path_csv))
                 self.dockwidget.push_zoom_source.clicked.connect(self.zoomSource)
-                self.dockwidget.push_calcul.clicked.connect(self.calculDistance)
+                self.dockwidget.push_calcul_page3.clicked.connect(lambda : self.dockwidget.stackedWidget.setCurrentIndex(4))
+                self.dockwidget.push_calcul_page4.clicked.connect(self.calculDistance)
 
                 #Connect lineEdit
                 self.dockwidget.lineEdit_file_complete.textChanged.connect(self.filePreview)
