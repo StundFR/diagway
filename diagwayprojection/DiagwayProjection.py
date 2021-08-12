@@ -35,6 +35,7 @@ from .DiagwayProjection_dockwidget import DiagwayProjectionDockWidget
 from .Layer import QgsLayer
 from .WorkerAuto import WorkerAuto
 from .WorkerFullAuto import WorkerFullAuto
+from .WorkerDistance import WorkerDistance
 from .Tools import *
 import os.path
 
@@ -329,6 +330,20 @@ class DiagwayProjection(QtCore.QObject):
 
         self.dockwidget.checkBox_symbolized_page3.enabled = True
             
+
+    def setupPage4(self):
+        listWidget_source = self.dockwidget.listWidget_fields_source
+        listWidget_dest = self.dockwidget.listWidget_fields_dest
+        fields_source = self.layer_source.getFields()
+        fields_dest = self.layer_dest.getFields()
+
+        listWidget_source.clear()
+        for f in fields_source:
+            listWidget_source.addItem(f)
+        listWidget_dest.clear()
+        for f in fields_dest:
+            listWidget_dest.addItem(f)
+
     #Check if all parameters are goods for the auto button
     def checkAutoButton(self):
         txt = self.dockwidget.lineEdit_fields_source.text()
@@ -501,106 +516,6 @@ class DiagwayProjection(QtCore.QObject):
                 return self.dockwidget.checkBox_symbolized_create.isChecked()
             else:
                 return False
-    
-    
-    def calculDistance(self):
-        import psycopg2
-        import csv
-
-        print("début")
-
-        re_geneger = self.dockwidget.checkBox_regenerate.isChecked()
-
-        HOST = self.dockwidget.lineEdit_host.text()
-        USER = self.dockwidget.lineEdit_user.text()
-        PASSWORD = self.dockwidget.lineEdit_password.text()
-        DATABASE = self.dockwidget.lineEdit_database.text()
-
-
-        # Open connection
-        try:
-            conn = psycopg2.connect(host=HOST, dbname=DATABASE, user=USER, password=PASSWORD)
-        except psycopg2.OperationalError as e:
-            self.iface.messageBar().pushMessage("Error", str(e), level=1, duration=8)
-            return 1
-        cur = conn.cursor()
-
-
-        if re_geneger:
-            strSqlQuery = "DROP TABLE IF EXISTS cores.terrain_client"
-            cur.execute(strSqlQuery)
-
-            strSqlQuery = "CREATE SCHEMA IF NOT EXISTS cores"
-            cur.execute(strSqlQuery)
-            
-            strSqlQuery = "CREATE TABLE cores.terrain_client (troncon_id integer,route_client text, cumuld_client numeric,cumulf_client numeric)"
-            cur.execute(strSqlQuery)
-            
-            strSqlQuery = "DROP TABLE IF EXISTS cores.client_terrain"
-            cur.execute(strSqlQuery)
-            
-            strSqlQuery = "CREATE TABLE cores.client_terrain (gid serial,route_client text,type_troncon text,geom_client geometry(LineStringM,2154),point_deb_client geometry(PointM,2154),point_fin_client geometry(PointM,2154),longueur_client numeric,troncon_id integer,cumuld_troncon numeric,cumulf_troncon numeric,longueur_terrain numeric,ecart numeric, sens_ausc integer, a_verifier boolean,CONSTRAINT client_terrain_pkey PRIMARY KEY (gid))"
-            cur.execute(strSqlQuery)
-
-            strSqlQueryInsertTerrainClient = """INSERT INTO cores.terrain_client (troncon_id,route_client) VALUES(%s,%s)"""
-            strstrSqlQueryInsertClientTerrain = """INSERT INTO cores.client_terrain (route_client,troncon_id) VALUES(%s,%s)"""
-
-            with open(self.path_csv, newline='') as csvfile:
-                reader = csv.DictReader(csvfile,delimiter=';')
-                for row in reader:
-                    sta_id=row[self.field_source]
-                    for route_client in (row[self.field_dest]).split(";"):
-                        cur.execute(strSqlQueryInsertTerrainClient,(sta_id,route_client))
-                        cur.execute(strstrSqlQueryInsertClientTerrain,(route_client,sta_id))            
-                        print(sta_id,route_client)
-                conn.commit()
-            
-            strSqlQuery = "UPDATE cores.client_terrain set type_troncon='Route'"
-            cur.execute(strSqlQuery)
-            conn.commit()
-
-            strSqlQuery = "UPDATE cores.client_terrain t1 set longueur_client = ST_LENGTH(t2.geom) from cores.route_client t2, cores.terrain_client t3 where t1.route_client = t3.route_client"
-            cur.execute(strSqlQuery)
-            conn.commit()
-
-            strSqlQuery = "Update cores.client_terrain t1 set geom_client = t2.geom from cores.route_client t2 where t1.route_client = t2.route_client"
-            cur.execute(strSqlQuery)
-            conn.commit()
-
-            strSqlQuery = "Update cores.client_terrain set point_deb_client = ST_StartPoint(geom_client),point_fin_client = ST_EndPoint(geom_client)"
-            cur.execute(strSqlQuery)
-            conn.commit()
-            
-            strSqlQuery ="alter table cores.client_terrain add column geom_terrain geometry(MultiLineStringM,2154)"
-            cur.execute(strSqlQuery)
-
-        strSqlQuery ="Update cores.client_terrain t3 set cumuld_troncon = ST_M(ST_LineInterpolatePoint(geom_troncon,ST_LineLocatePoint(geom_troncon,point_deb_client))),  cumulf_troncon = ST_M(ST_LineInterpolatePoint(geom_troncon,ST_LineLocatePoint(geom_troncon,point_fin_client)))      from (    select t1.route_client,t1.geom_client,t1.troncon_id,t2.geom as geom_troncon from cores.client_terrain t1  join cores.stc_voie t2 on t1.troncon_id = t2.sta_id ) r1    where t3.route_client = r1.route_client and t3.troncon_id = r1.troncon_id"
-        cur.execute(strSqlQuery)
-        conn.commit()
-
-        strSqlQuery ="Update cores.client_terrain set longueur_terrain = abs(cumulf_troncon-cumuld_troncon)"
-        cur.execute(strSqlQuery)
-        conn.commit()
-                        
-        strSqlQuery ="Update cores.client_terrain set sens_ausc = CASE When  cumulf_troncon-cumuld_troncon>=0 Then 1 else -1 End"
-        cur.execute(strSqlQuery)
-        conn.commit()
-
-        strSqlQuery ="Update cores.client_terrain set ecart = (longueur_terrain-longueur_client)"
-        cur.execute(strSqlQuery)
-
-        strSqlQuery ="Update cores.client_terrain set a_verifier = CASE WHEN abs(longueur_terrain-longueur_client)>=10 then TRUE ELSE FALSE END"
-
-        cur.execute(strSqlQuery)
-        conn.commit()
-
-        strSqlQuery ="Update cores.client_terrain t1 set geom_terrain = ST_LocateBetween(t2.geom,cumuld_troncon,cumulf_troncon) from cores.stc_voie t2 where t1.troncon_id = t2.sta_id"
-        cur.execute(strSqlQuery)
-        conn.commit()
-                
-        conn.close()
-        print("fin")
-
     #--------------------------------------------------------------------------
     """Algo Multithreading"""
     """Auto function"""
@@ -693,6 +608,57 @@ class DiagwayProjection(QtCore.QObject):
             self.iface.messageBar().pushMessage("Error", "Something went wrong... Check out the logs message for further informations", level=4, duration=4)
 
 
+    """Calcul distance function"""
+    def startDistance(self):
+        DATABASE = self.dockwidget.lineEdit_database.text()
+        HOST = self.dockwidget.lineEdit_host.text()
+        USER = self.dockwidget.lineEdit_user.text()
+        PASSWORD = self.dockwidget.lineEdit_password.text()
+        regenerate = self.dockwidget.checkBox_regenerate.isChecked()
+        items_source = self.dockwidget.listWidget_fields_source.selectedItems()
+        items_dest = self.dockwidget.listWidget_fields_dest.selectedItems()
+        fields_source = [i.text() for i in items_source]
+        fields_dest = [i.text() for i in items_dest]
+        worker = WorkerDistance(DATABASE, HOST, USER, PASSWORD, regenerate, self.layer_source, self.layer_dest, self.path_csv, self.field_source, self.field_dest, fields_source, fields_dest)
+
+        # configure the QgsMessageBar
+        messageBar = self.iface.messageBar().createMessage('Running...', )
+        progressBar = QProgressBar()
+        progressBar.setAlignment(QtCore.Qt.AlignLeft|QtCore.Qt.AlignVCenter)
+        cancelButton = QPushButton()
+        cancelButton.setText('Cancel')
+        cancelButton.clicked.connect(worker.kill)
+        messageBar.layout().addWidget(progressBar)
+        messageBar.layout().addWidget(cancelButton)
+        self.iface.messageBar().pushWidget(messageBar)
+        self.messageBar = messageBar
+
+        # start the worker in a new thread
+        thread = QtCore.QThread(self)
+        worker.moveToThread(thread)
+        worker.finished.connect(self.distanceFinished)
+        worker.error.connect(self.algoError)
+        worker.progress.connect(progressBar.setValue)
+        thread.started.connect(worker.run)
+        thread.start()
+        self.thread = thread
+        self.worker = worker
+
+    def distanceFinished(self, nb):
+        # clean up the worker and thread
+        self.worker.deleteLater()
+        self.thread.quit()
+        self.thread.wait()
+        self.thread.deleteLater()
+        # remove widget from message bar
+        self.iface.messageBar().popWidget(self.messageBar)
+        if nb:
+            # report the result
+            self.iface.messageBar().pushMessage("Done", "Algorith is finished", level=3, duration=4)
+        else:
+            # notify the user that something went wrong
+            self.iface.messageBar().pushMessage("Error", "Something went wrong... Check out the logs message for further informations", level=4, duration=4)
+
     def algoError(self, e, exception_string):
         QgsMessageLog.logMessage('Worker thread raised an exception: {} -- {}'.format(exception_string, e), level=Qgis.Critical)
     #--------------------------------------------------------------------------
@@ -731,28 +697,29 @@ class DiagwayProjection(QtCore.QObject):
                 self.dockwidget.lineEdit_file_complete.textChanged.connect(self.checkAll)
 
                 #Connect buttons
-                self.dockwidget.push_create.clicked.connect(lambda : self.dockwidget.stackedWidget.setCurrentIndex(1))
-                self.dockwidget.push_complete.clicked.connect(lambda : self.dockwidget.stackedWidget.setCurrentIndex(2))
-                self.dockwidget.push_create.clicked.connect(lambda : self.dockwidget.radio_w.setChecked(True))
-                self.dockwidget.push_complete.clicked.connect(lambda : self.dockwidget.radio_a.setChecked(True))
-                self.dockwidget.push_next.clicked.connect(lambda : self.dockwidget.stackedWidget.setCurrentIndex(3))
-                self.dockwidget.push_next_complete.clicked.connect(lambda : self.dockwidget.stackedWidget.setCurrentIndex(3))
                 self.dockwidget.push_cancel_create.clicked.connect(lambda : self.dockwidget.stackedWidget.setCurrentIndex(0))
                 self.dockwidget.push_cancel_complete.clicked.connect(lambda : self.dockwidget.stackedWidget.setCurrentIndex(0))
                 self.dockwidget.push_cancel_3.clicked.connect(lambda : self.dockwidget.stackedWidget.setCurrentIndex(0))
+                self.dockwidget.push_create.clicked.connect(lambda : self.dockwidget.stackedWidget.setCurrentIndex(1))
+                self.dockwidget.push_complete.clicked.connect(lambda : self.dockwidget.stackedWidget.setCurrentIndex(2))
+                self.dockwidget.push_next.clicked.connect(lambda : self.dockwidget.stackedWidget.setCurrentIndex(3))
+                self.dockwidget.push_next_complete.clicked.connect(lambda : self.dockwidget.stackedWidget.setCurrentIndex(3))
                 self.dockwidget.push_cancel_page4.clicked.connect(lambda : self.dockwidget.stackedWidget.setCurrentIndex(3))
+                self.dockwidget.push_calcul_page3.clicked.connect(lambda : self.dockwidget.stackedWidget.setCurrentIndex(4))
+                self.dockwidget.push_create.clicked.connect(lambda : self.dockwidget.radio_w.setChecked(True))
+                self.dockwidget.push_complete.clicked.connect(lambda : self.dockwidget.radio_a.setChecked(True))
                 self.dockwidget.push_file.clicked.connect(self.saveFile)
                 self.dockwidget.push_file_complete.clicked.connect(self.selectFile)
                 self.dockwidget.push_next.clicked.connect(self.setupPage3)
                 self.dockwidget.push_next_complete.clicked.connect(self.setupPage3)
+                self.dockwidget.push_calcul_page3.clicked.connect(self.setupPage4)
                 self.dockwidget.push_add.clicked.connect(self.addFields)
                 self.dockwidget.push_auto.clicked.connect(self.startAuto)
                 self.dockwidget.push_fullauto.clicked.connect(self.startFullAuto)
+                self.dockwidget.push_calcul_page4.clicked.connect(self.startDistance)
                 self.dockwidget.push_switch.clicked.connect(self.switch)
                 self.dockwidget.push_clear.clicked.connect(lambda : self.clearCSV(self.path_csv))
                 self.dockwidget.push_zoom_source.clicked.connect(self.zoomSource)
-                self.dockwidget.push_calcul_page3.clicked.connect(lambda : self.dockwidget.stackedWidget.setCurrentIndex(4))
-                self.dockwidget.push_calcul_page4.clicked.connect(self.calculDistance)
 
                 #Connect lineEdit
                 self.dockwidget.lineEdit_file_complete.textChanged.connect(self.filePreview)

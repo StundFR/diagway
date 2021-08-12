@@ -208,6 +208,10 @@ class QgsLayer:
         writer = QgsVectorFileWriter.writeAsVectorFormat(self.vector, path_output, 'UTF-8', self.vector.sourceCrs(), 'ESRI Shapefile')
         del(writer)
 
+    def exportToPostgis(self, database, schema):
+        parameters = {"INPUT" : self.vector, "DATABASE" : database, "SCHEMA" : schema, "TABLENAME" : self.name.lower().replace(".", "")}
+        processing.run("qgis:importintopostgis", parameters)
+
     #Add label
     def labeling(self, fontSize, field, color):
         layer_settings  = QgsPalLayerSettings()

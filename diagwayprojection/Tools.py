@@ -5,6 +5,7 @@ import shutil
 import tempfile
 
 from .Layer import QgsLayer
+from PyQt5.QtCore import QSettings
 
 LAYER_STATEMENT_NAME = "Statement_source"
 DIR_NAME = "/diagwayProjectionTmpLayer"
@@ -252,3 +253,29 @@ def getPath():
     createDir(path_dir)
     return path_dir
 
+#Create database in QGIS
+def addPostgisDB(host, dbname, user, password):
+    path = "PostgreSQL/connections/{}/".format(dbname)
+    s = QSettings()
+    s.setValue(path + "allowGeometrylessTables", False)
+    s.setValue(path + "autocfg", "")
+    s.setValue(path + "database", dbname)
+    s.setValue(path + "dontResolveType", False)
+    s.setValue(path + "estimatedMetadata", False)
+    s.setValue(path + "geometryColumnsOnly", False)
+    s.setValue(path + "host", host)
+    s.setValue(path + "password", password)
+    s.setValue(path + "port", 5432)
+    s.setValue(path + "projectsInDatabase", False)
+    s.setValue(path + "publicOnly", False)
+    s.setValue(path + "savePassword", False)
+    s.setValue(path + "saveUsername", False)
+    s.setValue(path + "service", "")
+    s.setValue(path + "sslmode", "SslDisable")
+    s.setValue(path + "username", user)
+
+
+def addListToStr(text, liste, sep):
+    for elem in liste:
+        text += " {}{}".format(str(elem), str(sep))
+    return text[:-1]
