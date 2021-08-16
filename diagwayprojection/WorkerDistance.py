@@ -7,14 +7,17 @@ import csv
 
 
 SCHEMA = "cores"
+SOURCE = "stc_voie"
+DEST = "route_client"
+FIELD_SOURCE = "sta_id"
+FIELD_DEST = "route_client"
 
 class WorkerDistance(QtCore.QObject):
     """Constructor & Variables"""
     finished = QtCore.pyqtSignal(int)
     error = QtCore.pyqtSignal(Exception, str)
-    progress = QtCore.pyqtSignal(float)
 
-    def __init__(self, database, host, user, password, regenerate, layer_source, layer_dest, path_csv, field_source, field_dest, fields_source, fields_dest):
+    def __init__(self, database, host, user, password, regenerate, layer_source : QgsLayer, layer_dest, path_csv, field_source, field_dest, fields_source, fields_dest):
         QtCore.QObject.__init__(self)
         self.database = database
         self.host = host
@@ -32,18 +35,15 @@ class WorkerDistance(QtCore.QObject):
     #--------------------------------------------------------------------------
 
     """Function for the algorithm"""
-    #To stop the algorithm
-    def kill(self):
-        self.killed = True
     #--------------------------------------------------------------------------
 
     """Run"""
     def run(self):
         try:
-            re_geneger = self.regenerate
+            self.layer_source.name = self.layer_source.name.lower().replace(".", "")
+            self.layer_dest.name = self.layer_dest.name.lower().replace(".", "")
 
-            self.progress.emit(0)
-
+            #Add to database to Qgis
             addPostgisDB(self.host, self.database, self.user, self.password)
 
             # Open connection
@@ -51,129 +51,105 @@ class WorkerDistance(QtCore.QObject):
             cur = conn.cursor()
 
 
-            if re_geneger:
-                strSqlQuery = "DROP SCHEMA IF EXISTS {} CASCADE".format(SCHEMA)
-                cur.execute(strSqlQuery)
-
+            if self.regenerate:
+                #Creation of all tables we need
                 strSqlQuery = "CREATE SCHEMA IF NOT EXISTS {}".format(SCHEMA)
                 cur.execute(strSqlQuery)
                 conn.commit()
 
-                strSqlQuery = "DROP TABLE IF EXISTS cores.terrain_client"
+                strSqlQuery = "DROP TABLE IF EXISTS {}.terrain_client".format(SCHEMA)
                 cur.execute(strSqlQuery)
                 
-                strSqlQuery = "CREATE TABLE cores.terrain_client (troncon_id integer,route_client text, cumuld_client numeric,cumulf_client numeric)"
+                strSqlQuery = "CREATE TABLE {}.terrain_client (troncon_id integer,route_client text, cumuld_client numeric,cumulf_client numeric)".format(SCHEMA)
                 cur.execute(strSqlQuery)
                 
-                strSqlQuery = "DROP TABLE IF EXISTS cores.client_terrain"
+                strSqlQuery = "DROP TABLE IF EXISTS {}.client_terrain".format(SCHEMA)
                 cur.execute(strSqlQuery)
                 
-                strSqlQuery = "CREATE TABLE cores.client_terrain (gid serial,route_client text,type_troncon text,geom_client geometry(LineStringM,2154),point_deb_client geometry(PointM,2154),point_fin_client geometry(PointM,2154),longueur_client numeric,troncon_id integer,cumuld_troncon numeric,cumulf_troncon numeric,longueur_terrain numeric,ecart numeric, sens_ausc integer, a_verifier boolean,CONSTRAINT client_terrain_pkey PRIMARY KEY (gid))"
+                strSqlQuery = "CREATE TABLE {}.client_terrain (gid serial,route_client text,type_troncon text,geom_client geometry(LineStringM,2154),point_deb_client geometry(PointM,2154),point_fin_client geometry(PointM,2154),longueur_client numeric,troncon_id integer,cumuld_troncon numeric,cumulf_troncon numeric,longueur_terrain numeric,ecart numeric, sens_ausc integer, a_verifier boolean,CONSTRAINT client_terrain_pkey PRIMARY KEY (gid))".format(SCHEMA)
                 cur.execute(strSqlQuery)
-
 
                 #Importation of QGIS layers in Postgis with selected columns and rename columns 
-                self.layer_source.exportToPostgis(self.database, SCHEMA)
-                self.layer_dest.exportToPostgis(self.database, SCHEMA)
+                self.layer_source.exportToPostgisLineString(self.database, self.host, SCHEMA, SOURCE, "geom")
+                self.layer_dest.exportToPostgisLineString(self.database, self.host, SCHEMA, DEST, "geom")
 
-                sqlQuery = "CREATE TABLE {}.tmp_source AS SELECT * FROM {}.{}".format(SCHEMA, SCHEMA, self.layer_source.name.lower().replace(".", ""))
-                cur.execute(sqlQuery)
-                
-                sqlQuery = "CREATE TABLE {}.tmp_dest AS SELECT * FROM {}.{}".format(SCHEMA, SCHEMA, self.layer_dest.name.lower().replace(".", ""))
-                cur.execute(sqlQuery)
+                table_tuple = [(SOURCE, self.fields_source, self.field_source, FIELD_SOURCE), (DEST, self.fields_dest, self.field_dest, FIELD_DEST)]
 
-                sqlQuery = "DROP TABLE {}.{} CASCADE".format(SCHEMA, self.layer_source.name.lower().replace(".", ""))
-                cur.execute(sqlQuery)
+                for tuple in table_tuple:
+                    sqlQuery = "SELECT column_name FROM information_schema.columns WHERE table_schema = '{}' AND table_name = '{}'".format(SCHEMA, tuple[0])
+                    cur.execute(sqlQuery)
 
-                sqlQuery = "DROP TABLE {}.{} CASCADE".format(SCHEMA, self.layer_dest.name.lower().replace(".", ""))
-                cur.execute(sqlQuery)
+                    columns = cur.fetchall()
+                    for elem in columns:
+                        if not elem[0] in tuple[1] and elem[0] != "geom" and elem[0] != tuple[2]: 
+                            sqlQuery = "ALTER TABLE {}.{} DROP COLUMN {}".format(SCHEMA, tuple[0], elem[0])
+                            cur.execute(sqlQuery)
 
-                sqlQuery = "CREATE TABLE {}.stc_voie AS SELECT".format(SCHEMA)
-                sqlQuery = addListToStr(sqlQuery, self.fields_source, ",")
-                if sqlQuery.find("geom") == -1:
-                    sqlQuery += ", geom"
-                sqlQuery += " FROM {}.tmp_source".format(SCHEMA)
-                sqlQuery = sqlQuery.replace(self.field_source+",", "{} AS sta_id,".format(self.field_source))
-                cur.execute(sqlQuery)
+                    if tuple[2] != tuple[3]:
+                        sqlQuery = "ALTER TABLE {}.{} RENAME COLUMN {} TO {}".format(SCHEMA, tuple[0], tuple[2], tuple[3])
+                        cur.execute(sqlQuery)
 
-                sqlQuery = "CREATE TABLE {}.route_client AS SELECT".format(SCHEMA)
-                sqlQuery = addListToStr(sqlQuery, self.fields_dest, ",")
-                if sqlQuery.find("geom") == -1:
-                    sqlQuery += ", geom"
-                sqlQuery += " FROM {}.tmp_dest".format(SCHEMA)
-                sqlQuery = sqlQuery.replace(self.field_dest+",", "{} AS route_client,".format(self.field_dest))
-                cur.execute(sqlQuery)
-
-                sqlQuery = "DROP TABLE {}.tmp_source CASCADE".format(SCHEMA)
-                cur.execute(sqlQuery)
-
-                sqlQuery = "DROP TABLE {}.tmp_dest CASCADE".format(SCHEMA)
-                cur.execute(sqlQuery)
                 conn.commit()
 
-
-                strSqlQueryInsertTerrainClient = "INSERT INTO cores.terrain_client (troncon_id,route_client) VALUES(%s,%s)"
-                strstrSqlQueryInsertClientTerrain = "INSERT INTO cores.client_terrain (route_client,troncon_id) VALUES(%s,%s)"
+                #Insert CSV data in database
+                strSqlQueryInsertTerrainClient = "INSERT INTO {}.terrain_client (troncon_id,route_client) VALUES(%s,%s)".format(SCHEMA)
+                strstrSqlQueryInsertClientTerrain = "INSERT INTO {}.client_terrain (route_client,troncon_id) VALUES(%s,%s)".format(SCHEMA)
 
                 with open(self.path_csv, newline='') as csvfile:
                     reader = csv.DictReader(csvfile,delimiter=';')
+                    reader = csv.DictReader(csvfile,delimiter=';')
                     for row in reader:
-                        if self.killed:
-                            break
                         sta_id=row[self.field_source]
                         for route_client in (row[self.field_dest]).split(";"):
-                            if self.killed:
-                                break
                             cur.execute(strSqlQueryInsertTerrainClient,(sta_id,route_client))
                             cur.execute(strstrSqlQueryInsertClientTerrain,(route_client,sta_id))            
-                            #print(sta_id,route_client)
                     conn.commit()
                 
-                strSqlQuery = "UPDATE cores.client_terrain set type_troncon='Route'"
+                strSqlQuery = "UPDATE {}.client_terrain set type_troncon='Route'".format(SCHEMA)
                 cur.execute(strSqlQuery)
                 conn.commit()
 
-                strSqlQuery = "UPDATE cores.client_terrain t1 set longueur_client = ST_LENGTH(t2.geom) from cores.route_client t2 where t1.route_client = t2.route_client"
+                strSqlQuery = "UPDATE {}.client_terrain t1 set longueur_client = ST_LENGTH(t2.geom) from {}.{} t2 where t1.route_client = t2.route_client".format(SCHEMA, SCHEMA, DEST)
                 cur.execute(strSqlQuery)
                 conn.commit()
 
-                strSqlQuery = "Update cores.client_terrain t1 set geom_client = t2.geom from cores.route_client t2 where t1.route_client = t2.route_client"
+                strSqlQuery = "Update {}.client_terrain t1 set geom_client = t2.geom from {}.{} t2 where t1.route_client = t2.route_client".format(SCHEMA, SCHEMA, DEST)
                 cur.execute(strSqlQuery)
                 conn.commit()
 
-                strSqlQuery = "Update cores.client_terrain set point_deb_client = ST_StartPoint(geom_client),point_fin_client = ST_EndPoint(geom_client)"
+                strSqlQuery = "Update {}.client_terrain set point_deb_client = ST_StartPoint(geom_client),point_fin_client = ST_EndPoint(geom_client)".format(SCHEMA)
                 cur.execute(strSqlQuery)
                 conn.commit()
                 
-                strSqlQuery ="alter table cores.client_terrain add column geom_terrain geometry(MultiLineStringM,2154)"
+                strSqlQuery = "alter table {}.client_terrain add column geom_terrain geometry(MultiLineStringM,2154)".format(SCHEMA)
                 cur.execute(strSqlQuery)
 
-            strSqlQuery ="Update cores.client_terrain t3 set cumuld_troncon = ST_M(ST_LineInterpolatePoint(geom_troncon,ST_LineLocatePoint(geom_troncon,point_deb_client))),  cumulf_troncon = ST_M(ST_LineInterpolatePoint(geom_troncon,ST_LineLocatePoint(geom_troncon,point_fin_client)))      from (    select t1.route_client,t1.geom_client,t1.troncon_id,t2.geom as geom_troncon from cores.client_terrain t1  join cores.stc_voie t2 on t1.troncon_id = t2.sta_id ) r1    where t3.route_client = r1.route_client and t3.troncon_id = r1.troncon_id"
+            #Calcul
+            strSqlQuery = "Update {}.client_terrain t3 set cumuld_troncon = ST_M(ST_LineInterpolatePoint(geom_troncon,ST_LineLocatePoint(geom_troncon,point_deb_client))), cumulf_troncon = ST_M(ST_LineInterpolatePoint(geom_troncon,ST_LineLocatePoint(geom_troncon,point_fin_client))) from (select t1.route_client,t1.geom_client,t1.troncon_id,t2.geom as geom_troncon from {}.client_terrain t1 join {}.{} t2 on t1.troncon_id = t2.sta_id ) r1 where t3.route_client = r1.route_client and t3.troncon_id = r1.troncon_id".format(SCHEMA, SCHEMA, SCHEMA, SOURCE)
             cur.execute(strSqlQuery)
             conn.commit()
 
-            strSqlQuery ="Update cores.client_terrain set longueur_terrain = abs(cumulf_troncon-cumuld_troncon)"
-            cur.execute(strSqlQuery)
-            conn.commit()
-                            
-            strSqlQuery ="Update cores.client_terrain set sens_ausc = CASE When  cumulf_troncon-cumuld_troncon>=0 Then 1 else -1 End"
+            strSqlQuery = "Update {}.client_terrain set longueur_terrain = abs(cumulf_troncon-cumuld_troncon)".format(SCHEMA)
             cur.execute(strSqlQuery)
             conn.commit()
 
-            strSqlQuery ="Update cores.client_terrain set ecart = (longueur_terrain-longueur_client)"
+            strSqlQuery = "Update {}.client_terrain set sens_ausc = CASE When  cumulf_troncon-cumuld_troncon>=0 Then 1 else -1 End".format(SCHEMA)
+            cur.execute(strSqlQuery)
+            conn.commit()
+
+            strSqlQuery = "Update {}.client_terrain set ecart = (longueur_terrain-longueur_client)".format(SCHEMA)
             cur.execute(strSqlQuery)
 
-            strSqlQuery ="Update cores.client_terrain set a_verifier = CASE WHEN abs(longueur_terrain-longueur_client)>=10 then TRUE ELSE FALSE END"
+            strSqlQuery = "Update {}.client_terrain set a_verifier = CASE WHEN abs(longueur_terrain-longueur_client)>=10 then TRUE ELSE FALSE END".format(SCHEMA)
 
             cur.execute(strSqlQuery)
             conn.commit()
 
-            strSqlQuery ="Update cores.client_terrain t1 set geom_terrain = ST_LocateBetween(t2.geom,cumuld_troncon,cumulf_troncon) from cores.stc_voie t2 where t1.troncon_id = t2.sta_id"
+            strSqlQuery = "Update {}.client_terrain t1 set geom_terrain = ST_LocateBetween(t2.geom, cumuld_troncon, cumulf_troncon) from {}.{} t2 where t1.troncon_id = t2.sta_id AND GeometryType(t2.geom)=' LINESTRING'".format(SCHEMA, SCHEMA, SOURCE)
             cur.execute(strSqlQuery)
             conn.commit()
                     
             conn.close()
-            self.progress.emit(100)
             nb = 1
         except Exception as e:
             nb = 0

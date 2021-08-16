@@ -1,5 +1,5 @@
 from qgis import processing
-from qgis.core import QgsVectorFileWriter
+from qgis.core import QgsVectorFileWriter, QgsProject
 from os import mkdir, path
 import shutil
 import tempfile
@@ -8,7 +8,7 @@ from .Layer import QgsLayer
 from PyQt5.QtCore import QSettings
 
 LAYER_STATEMENT_NAME = "Statement_source"
-DIR_NAME = "/diagwayProjectionTmpLayer"
+DIR_NAME = "diagwayProjectionTmpLayer"
 
 #Delete duplicate value in list
 def supprDouble(list):
@@ -249,7 +249,7 @@ def intersect(layer_source, layer_dest, precision, path_output):
 #Get the path of temporary files
 def getPath():
     path_temp = tempfile.gettempdir()
-    path_dir = path_temp + DIR_NAME
+    path_dir = "{}/{}_{}".format(path_temp, DIR_NAME, getNameFromPath(QgsProject.instance().readPath("./")))
     createDir(path_dir)
     return path_dir
 

@@ -235,6 +235,7 @@ class DiagwayProjection(QtCore.QObject):
             self.layer_source = self.layer_source.projectionLT93("{}/{}_LT93.shp".format(path_dir, self.layer_source.name))
             QgsLayer.removeLayersByName(layer_source.name())
             self.layer_source.add()
+
         if not self.layer_dest.isLT93():
             self.layer_dest = self.layer_dest.projectionLT93("{}/{}_LT93.shp".format(path_dir, self.layer_dest.name))
             QgsLayer.removeLayersByName(layer_dest.name())
@@ -242,6 +243,7 @@ class DiagwayProjection(QtCore.QObject):
 
         if not self.layer_source.isFieldExist(self.field_source):
             self.field_source = self.field_source[:-2]
+            
         if not self.layer_dest.isFieldExist(self.field_dest):
             self.field_dest = self.field_dest[:-2]
 
@@ -623,13 +625,6 @@ class DiagwayProjection(QtCore.QObject):
 
         # configure the QgsMessageBar
         messageBar = self.iface.messageBar().createMessage('Running...', )
-        progressBar = QProgressBar()
-        progressBar.setAlignment(QtCore.Qt.AlignLeft|QtCore.Qt.AlignVCenter)
-        cancelButton = QPushButton()
-        cancelButton.setText('Cancel')
-        cancelButton.clicked.connect(worker.kill)
-        messageBar.layout().addWidget(progressBar)
-        messageBar.layout().addWidget(cancelButton)
         self.iface.messageBar().pushWidget(messageBar)
         self.messageBar = messageBar
 
@@ -638,7 +633,6 @@ class DiagwayProjection(QtCore.QObject):
         worker.moveToThread(thread)
         worker.finished.connect(self.distanceFinished)
         worker.error.connect(self.algoError)
-        worker.progress.connect(progressBar.setValue)
         thread.started.connect(worker.run)
         thread.start()
         self.thread = thread

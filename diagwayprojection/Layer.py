@@ -59,9 +59,6 @@ class QgsLayer:
         from .Tools import getNameFromPath
         buffer_name = getNameFromPath(path_buffer)
 
-        if (os.path.isfile(path_buffer)):
-            return QgsLayer(path_buffer, buffer_name)
-
         source_layer_feats = self.vector.getFeatures()
         source_layer_fields = self.vector.fields()
         writer = QgsVectorFileWriter(path_buffer, 'UTF-8',  source_layer_fields, QgsWkbTypes.Polygon, self.vector.sourceCrs(), 'ESRI Shapefile')
@@ -247,13 +244,10 @@ class QgsLayer:
 
     #Projecto layer to Lambert93
     def projectionLT93(self, path_output):
-        if (os.path.isfile(path_output)):
-            return QgsLayer(path_output, "{}_LT93".format(self.name))
+        parameter = {'INPUT': self.vector, 'TARGET_CRS': 'EPSG:2154','OUTPUT': path_output}
+        result = processing.run('native:reprojectlayer', parameter)
 
-        parameters = {'INPUT': self.vector, 'TARGET_CRS': 'EPSG:2154', 'OUTPUT': path_output}
-        processing.run("qgis:reprojectlayer", parameters)
-
-        return QgsLayer(path_output, self.name+"_LT93")
+        return QgsLayer(path_output, self.name+"_lt93")
 
     #Remove features of a layer by an expression
     def removeFeaturesByExpression(self, expression):
@@ -279,6 +273,13 @@ class QgsLayer:
         else:
             return True
 
+
+    def exportToPostgisLineString(self, dbname, host, schema, table, geom):
+        parameters = {"INPUT" : self.vector, "TYPE" : 2, "OUTPUT": "postgres://dbname='{}' host={} port=5432 sslmode=disable table=\"{}\".\"{}\" ({})".format(dbname, host, schema, table, geom)}
+        processing.run("qgis:convertgeometrytype", parameters)
+
+#---------------------------------------------------------------------------------------------------------------------------------------    
+    
     """class functions"""
     #return layer by his name
     @classmethod
