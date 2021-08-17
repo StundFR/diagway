@@ -5,7 +5,6 @@ from qgis import processing
 from qgis.core.additions.edit import edit
 
 from PyQt5.QtCore import *
-import os.path
 
 LAYER_STATEMENT_NAME = "Statement_source"
 

@@ -256,7 +256,7 @@ class DiagwayProjection(QtCore.QObject):
             for f in fields:
                 comboBox.addItem(f.name())
 
-    #Check if all box are correct
+    #Check if all box are correct for page3
     def checkAll(self):
         if (self.dockwidget.radio_a.isChecked()):
             path_csv = self.dockwidget.lineEdit_file_complete.text()
@@ -274,6 +274,19 @@ class DiagwayProjection(QtCore.QObject):
         else:
             self.dockwidget.push_next_complete.setEnabled(check)
 
+    #Check if we can run calcul distane
+    def checkCalculDistance(self):
+        check_db = (self.dockwidget.lineEdit_database.text() != "")
+        check_host = (self.dockwidget.lineEdit_host.text() != "")
+        check_generate = self.dockwidget.checkBox_regenerate.isChecked()
+        items_source = self.dockwidget.listWidget_fields_source.selectedItems()
+        items_dest = self.dockwidget.listWidget_fields_dest.selectedItems()
+        check_source = (sum(1 for _ in items_source) > 0)
+        check_dest = (sum(1 for _ in items_dest) > 0)
+
+        checkAll = check_db and check_host and ((check_source and check_dest) or not check_generate)
+        self.dockwidget.push_calcul_page4.setEnabled(checkAll)
+
     #Display the prewiew of a file in 
     def filePreview(self):
         path_csv = self.dockwidget.lineEdit_file_complete.text()
@@ -289,7 +302,7 @@ class DiagwayProjection(QtCore.QObject):
         finally:
             self.dockwidget.textEdit_preview.setText(text)
 
-    #Makes the preparations for the last page
+    #Makes the preparations for the projection
     def setupPage3(self):
         self.initSourceDestFile()
         self.layer_source.filter("")
@@ -332,7 +345,7 @@ class DiagwayProjection(QtCore.QObject):
 
         self.dockwidget.checkBox_symbolized_page3.enabled = True
             
-
+    #Makes the preparations for the calcul distance
     def setupPage4(self):
         listWidget_source = self.dockwidget.listWidget_fields_source
         listWidget_dest = self.dockwidget.listWidget_fields_dest
@@ -442,7 +455,7 @@ class DiagwayProjection(QtCore.QObject):
             l.setVisibility(visibility)
 
         layer_statement.setVisibility(not visibility)
-        
+
     #Select entity when you put a value in source lineEdit
     def showField(self):
         textEdit_dest = self.dockwidget.lineEdit_fields_dest
@@ -617,11 +630,12 @@ class DiagwayProjection(QtCore.QObject):
         USER = self.dockwidget.lineEdit_user.text()
         PASSWORD = self.dockwidget.lineEdit_password.text()
         regenerate = self.dockwidget.checkBox_regenerate.isChecked()
+        add = self.dockwidget.checkBox_add.isChecked()
         items_source = self.dockwidget.listWidget_fields_source.selectedItems()
         items_dest = self.dockwidget.listWidget_fields_dest.selectedItems()
         fields_source = [i.text() for i in items_source]
         fields_dest = [i.text() for i in items_dest]
-        worker = WorkerDistance(DATABASE, HOST, USER, PASSWORD, regenerate, self.layer_source, self.layer_dest, self.path_csv, self.field_source, self.field_dest, fields_source, fields_dest)
+        worker = WorkerDistance(DATABASE, HOST, USER, PASSWORD, regenerate, add, self.layer_source, self.layer_dest, self.path_csv, self.field_source, self.field_dest, fields_source, fields_dest)
 
         # configure the QgsMessageBar
         messageBar = self.iface.messageBar().createMessage('Running...', )
@@ -725,11 +739,21 @@ class DiagwayProjection(QtCore.QObject):
                 self.dockwidget.lineEdit_fields_source.textChanged.connect(self.checkAddButton)
                 self.dockwidget.lineEdit_fields_dest.textChanged.connect(self.checkAddButton)
                 self.dockwidget.lineEdit_fields_source.editingFinished.connect(self.showField)
+                self.dockwidget.lineEdit_database.textChanged.connect(self.checkCalculDistance)
+                self.dockwidget.lineEdit_host.textChanged.connect(self.checkCalculDistance)
+                self.dockwidget.lineEdit_user.textChanged.connect(self.checkCalculDistance)
+                self.dockwidget.lineEdit_password.textChanged.connect(self.checkCalculDistance)
 
                 #Connect checkbox
                 self.dockwidget.checkBox_labeling_source.stateChanged.connect(lambda : self.showLabeling(self.layer_source))
                 self.dockwidget.checkBox_labeling_dest.stateChanged.connect(lambda : self.showLabeling(self.layer_dest))
                 self.dockwidget.checkBox_labeling_statement.stateChanged.connect(lambda : self.showLabeling(QgsLayer.findLayerByName(LAYER_STATEMENT_NAME)))
+                self.dockwidget.checkBox_regenerate.stateChanged.connect(lambda : self.dockwidget.listWidget_fields_source.setEnabled(self.dockwidget.checkBox_regenerate.isChecked()))
+                self.dockwidget.checkBox_regenerate.stateChanged.connect(lambda : self.dockwidget.listWidget_fields_dest.setEnabled(self.dockwidget.checkBox_regenerate.isChecked()))
+
+                #ListWidget
+                self.dockwidget.listWidget_fields_source.itemSelectionChanged.connect(self.checkCalculDistance)
+                self.dockwidget.listWidget_fields_dest.itemSelectionChanged.connect(self.checkCalculDistance)
 
 
                 self.iface.mapCanvas().selectionChanged.connect(self.getSelectedEntity)
