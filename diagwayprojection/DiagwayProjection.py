@@ -359,6 +359,9 @@ class DiagwayProjection(QtCore.QObject):
         for f in fields_dest:
             listWidget_dest.addItem(f)
 
+        self.dockwidget.layer_name_source.setText("{} :".format(self.layer_source.name))
+        self.dockwidget.layer_name_dest.setText("{} :".format(self.layer_dest.name))
+
     #Check if all parameters are goods for the auto button
     def checkAutoButton(self):
         txt = self.dockwidget.lineEdit_fields_source.text()
