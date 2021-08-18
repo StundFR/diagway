@@ -17,12 +17,13 @@ class WorkerDistance(QtCore.QObject):
     finished = QtCore.pyqtSignal(int)
     error = QtCore.pyqtSignal(Exception, str)
 
-    def __init__(self, database, host, user, password, regenerate, add, layer_source, layer_dest, path_csv, field_source, field_dest, fields_source, fields_dest):
+    def __init__(self, database, host, user, password, port, regenerate, add, layer_source, layer_dest, path_csv, field_source, field_dest, fields_source, fields_dest):
         QtCore.QObject.__init__(self)
         self.database = database
         self.host = host
         self.user = user
         self.password = password
+        self.port = port
         self.regenerate = regenerate
         self.add = add
         self.layer_source = layer_source
@@ -45,10 +46,10 @@ class WorkerDistance(QtCore.QObject):
             self.layer_dest.name = self.layer_dest.name.lower().replace(".", "")
 
             #Add to database to Qgis
-            addPostgisDB(self.host, self.database, self.user, self.password)
+            addPostgisDB(self.host, self.database, self.user, self.password, self.port)
 
             # Open connection
-            conn = psycopg2.connect(host=self.host, dbname=self.database, user=self.user, password=self.password)
+            conn = psycopg2.connect(host=self.host, dbname=self.database, user=self.user, password=self.password, port=self.port)
             cur = conn.cursor()
 
 
@@ -57,8 +58,14 @@ class WorkerDistance(QtCore.QObject):
                 Création/Remplacement de toutes les données
                 """
                 """Création des nouvelles tables"""
-                strSqlQuery = "DROP SCHEMA IF EXISTS {} CASCADE".format(SCHEMA)
-                cur.execute(strSqlQuery)
+                sqlQuery = "SELECT schema_name FROM information_schema.schemata WHERE schema_name = '{}'".format(SCHEMA)
+                cur.execute(sqlQuery)
+                res = len(cur.fetchall())
+
+                if res == 1:
+                    sqlQuery = "ALTER SCHEMA {schema} RENAME TO {schema}_backup".format(schema = SCHEMA)
+                    cur.execute(sqlQuery)
+                    conn.commit()
 
                 strSqlQuery = "CREATE SCHEMA IF NOT EXISTS {}".format(SCHEMA)
                 cur.execute(strSqlQuery)

@@ -254,7 +254,7 @@ def getPath():
     return path_dir
 
 #Create database in QGIS
-def addPostgisDB(host, dbname, user, password):
+def addPostgisDB(host, dbname, user, password, port):
     path = "PostgreSQL/connections/{}/".format(dbname)
     s = QSettings()
     s.setValue(path + "allowGeometrylessTables", False)
@@ -265,7 +265,7 @@ def addPostgisDB(host, dbname, user, password):
     s.setValue(path + "geometryColumnsOnly", False)
     s.setValue(path + "host", host)
     s.setValue(path + "password", password)
-    s.setValue(path + "port", 5432)
+    s.setValue(path + "port", port)
     s.setValue(path + "projectsInDatabase", False)
     s.setValue(path + "publicOnly", False)
     s.setValue(path + "savePassword", False)

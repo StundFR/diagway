@@ -1338,22 +1338,69 @@
       </widget>
       <widget class="QWidget" name="page">
        <layout class="QGridLayout" name="gridLayout_2">
-        <item row="0" column="0">
-         <layout class="QHBoxLayout" name="horizontalLayout_20">
+        <item row="5" column="0">
+         <layout class="QHBoxLayout" name="horizontalLayout_27">
           <item>
-           <widget class="QLabel" name="label_database">
+           <widget class="QCheckBox" name="checkBox_regenerate">
             <property name="font">
              <font>
               <pointsize>13</pointsize>
              </font>
             </property>
             <property name="text">
-             <string>Database :</string>
+             <string>Regenerate</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
             </property>
            </widget>
           </item>
           <item>
-           <widget class="QLineEdit" name="lineEdit_database">
+           <widget class="QCheckBox" name="checkBox_add">
+            <property name="font">
+             <font>
+              <pointsize>13</pointsize>
+             </font>
+            </property>
+            <property name="text">
+             <string>Add</string>
+            </property>
+            <property name="checked">
+             <bool>false</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <spacer name="horizontalSpacer_28">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>40</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+         </layout>
+        </item>
+        <item row="3" column="0">
+         <layout class="QHBoxLayout" name="horizontalLayout_22">
+          <item>
+           <widget class="QLabel" name="label_user">
+            <property name="font">
+             <font>
+              <pointsize>13</pointsize>
+             </font>
+            </property>
+            <property name="text">
+             <string>User :</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLineEdit" name="lineEdit_user">
             <property name="enabled">
              <bool>true</bool>
             </property>
@@ -1400,38 +1447,7 @@
           </item>
          </layout>
         </item>
-        <item row="2" column="0">
-         <layout class="QHBoxLayout" name="horizontalLayout_22">
-          <item>
-           <widget class="QLabel" name="label_user">
-            <property name="font">
-             <font>
-              <pointsize>13</pointsize>
-             </font>
-            </property>
-            <property name="text">
-             <string>User :</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QLineEdit" name="lineEdit_user">
-            <property name="enabled">
-             <bool>true</bool>
-            </property>
-            <property name="font">
-             <font>
-              <pointsize>11</pointsize>
-             </font>
-            </property>
-            <property name="clearButtonEnabled">
-             <bool>false</bool>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </item>
-        <item row="3" column="0">
+        <item row="4" column="0">
          <layout class="QHBoxLayout" name="horizontalLayout_23">
           <item>
            <widget class="QLabel" name="label_password">
@@ -1468,54 +1484,53 @@
           </item>
          </layout>
         </item>
-        <item row="4" column="0">
-         <layout class="QHBoxLayout" name="horizontalLayout_27">
+        <item row="0" column="0">
+         <layout class="QHBoxLayout" name="horizontalLayout_20">
           <item>
-           <widget class="QCheckBox" name="checkBox_regenerate">
+           <widget class="QLabel" name="label_database">
             <property name="font">
              <font>
               <pointsize>13</pointsize>
              </font>
             </property>
             <property name="text">
-             <string>Regenerate</string>
-            </property>
-            <property name="checked">
-             <bool>true</bool>
+             <string>Database :</string>
             </property>
            </widget>
           </item>
           <item>
-           <widget class="QCheckBox" name="checkBox_add">
+           <widget class="QLineEdit" name="lineEdit_database">
+            <property name="enabled">
+             <bool>true</bool>
+            </property>
             <property name="font">
              <font>
-              <pointsize>13</pointsize>
+              <pointsize>11</pointsize>
              </font>
             </property>
-            <property name="text">
-             <string>Add</string>
-            </property>
-            <property name="checked">
-             <bool>true</bool>
+            <property name="clearButtonEnabled">
+             <bool>false</bool>
             </property>
            </widget>
-          </item>
-          <item>
-           <spacer name="horizontalSpacer_28">
-            <property name="orientation">
-             <enum>Qt::Horizontal</enum>
-            </property>
-            <property name="sizeHint" stdset="0">
-             <size>
-              <width>40</width>
-              <height>20</height>
-             </size>
-            </property>
-           </spacer>
           </item>
          </layout>
         </item>
-        <item row="5" column="0">
+        <item row="7" column="0">
+         <widget class="QPushButton" name="push_calcul_page4">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
+          <property name="font">
+           <font>
+            <pointsize>13</pointsize>
+           </font>
+          </property>
+          <property name="text">
+           <string>Calcul distance</string>
+          </property>
+         </widget>
+        </item>
+        <item row="6" column="0">
          <layout class="QHBoxLayout" name="horizontalLayout_26">
           <item>
            <spacer name="horizontalSpacer_27">
@@ -1692,34 +1707,7 @@
           </item>
          </layout>
         </item>
-        <item row="6" column="0">
-         <widget class="QPushButton" name="push_calcul_page4">
-          <property name="enabled">
-           <bool>false</bool>
-          </property>
-          <property name="font">
-           <font>
-            <pointsize>13</pointsize>
-           </font>
-          </property>
-          <property name="text">
-           <string>Calcul distance</string>
-          </property>
-         </widget>
-        </item>
-        <item row="7" column="0">
-         <widget class="QPushButton" name="push_cancel_page4">
-          <property name="font">
-           <font>
-            <pointsize>13</pointsize>
-           </font>
-          </property>
-          <property name="text">
-           <string>Cancel</string>
-          </property>
-         </widget>
-        </item>
-        <item row="8" column="0">
+        <item row="9" column="0">
          <spacer name="verticalSpacer_15">
           <property name="orientation">
            <enum>Qt::Vertical</enum>
@@ -1731,6 +1719,55 @@
            </size>
           </property>
          </spacer>
+        </item>
+        <item row="8" column="0">
+         <widget class="QPushButton" name="push_cancel_page4">
+          <property name="font">
+           <font>
+            <pointsize>13</pointsize>
+           </font>
+          </property>
+          <property name="text">
+           <string>Cancel</string>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="0">
+         <layout class="QHBoxLayout" name="horizontalLayout_28">
+          <item>
+           <widget class="QLabel" name="label_port">
+            <property name="font">
+             <font>
+              <pointsize>13</pointsize>
+             </font>
+            </property>
+            <property name="text">
+             <string>Port :</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLineEdit" name="lineEdit_port">
+            <property name="enabled">
+             <bool>true</bool>
+            </property>
+            <property name="font">
+             <font>
+              <pointsize>11</pointsize>
+             </font>
+            </property>
+            <property name="text">
+             <string>5432</string>
+            </property>
+            <property name="placeholderText">
+             <string/>
+            </property>
+            <property name="clearButtonEnabled">
+             <bool>false</bool>
+            </property>
+           </widget>
+          </item>
+         </layout>
         </item>
        </layout>
       </widget>
@@ -1783,9 +1820,13 @@
   <tabstop>push_calcul_page3</tabstop>
   <tabstop>lineEdit_database</tabstop>
   <tabstop>lineEdit_host</tabstop>
+  <tabstop>lineEdit_port</tabstop>
   <tabstop>lineEdit_user</tabstop>
   <tabstop>lineEdit_password</tabstop>
   <tabstop>checkBox_regenerate</tabstop>
+  <tabstop>checkBox_add</tabstop>
+  <tabstop>listWidget_fields_source</tabstop>
+  <tabstop>listWidget_fields_dest</tabstop>
   <tabstop>push_calcul_page4</tabstop>
   <tabstop>push_cancel_page4</tabstop>
   <tabstop>radio_w</tabstop>

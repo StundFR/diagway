@@ -248,7 +248,7 @@ class DiagwayProjection(QtCore.QObject):
             self.field_dest = self.field_dest[:-2]
 
     #Filled the combo box fields
-    def fillFields(self, comboBox):
+    def fillComboBoxWithFields(self, comboBox):
         comboBox.clear()
         layer = self.dockwidget.sender().currentLayer()
         if layer is not None:
@@ -257,7 +257,7 @@ class DiagwayProjection(QtCore.QObject):
                 comboBox.addItem(f.name())
 
     #Check if all box are correct for page3
-    def checkAll(self):
+    def checkCorrespondance(self):
         if (self.dockwidget.radio_a.isChecked()):
             path_csv = self.dockwidget.lineEdit_file_complete.text()
             layer_source = self.dockwidget.comboBox_layers_source_complete.currentLayer()
@@ -278,17 +278,18 @@ class DiagwayProjection(QtCore.QObject):
     def checkCalculDistance(self):
         check_db = (self.dockwidget.lineEdit_database.text() != "")
         check_host = (self.dockwidget.lineEdit_host.text() != "")
+        check_port = (self.dockwidget.lineEdit_port.text() != "")
         check_generate = self.dockwidget.checkBox_regenerate.isChecked()
         items_source = self.dockwidget.listWidget_fields_source.selectedItems()
         items_dest = self.dockwidget.listWidget_fields_dest.selectedItems()
         check_source = (sum(1 for _ in items_source) > 0)
         check_dest = (sum(1 for _ in items_dest) > 0)
 
-        checkAll = check_db and check_host and ((check_source and check_dest) or not check_generate)
-        self.dockwidget.push_calcul_page4.setEnabled(checkAll)
+        check = check_db and check_host and check_port and ((check_source and check_dest) or not check_generate)
+        self.dockwidget.push_calcul_page4.setEnabled(check)
 
     #Display the prewiew of a file in 
-    def filePreview(self):
+    def fillPreviewWithFile(self):
         path_csv = self.dockwidget.lineEdit_file_complete.text()
         try:
             with open(path_csv, "r") as csv:
@@ -303,7 +304,7 @@ class DiagwayProjection(QtCore.QObject):
             self.dockwidget.textEdit_preview.setText(text)
 
     #Makes the preparations for the projection
-    def setupPage3(self):
+    def setupCorrespondance(self):
         self.initSourceDestFile()
         self.layer_source.filter("")
         self.layer_dest.filter("")
@@ -346,7 +347,7 @@ class DiagwayProjection(QtCore.QObject):
         self.dockwidget.checkBox_symbolized_page3.enabled = True
             
     #Makes the preparations for the calcul distance
-    def setupPage4(self):
+    def setupCalculDistance(self):
         listWidget_source = self.dockwidget.listWidget_fields_source
         listWidget_dest = self.dockwidget.listWidget_fields_dest
         fields_source = self.layer_source.getFields()
@@ -363,7 +364,7 @@ class DiagwayProjection(QtCore.QObject):
         self.dockwidget.layer_name_dest.setText("{} :".format(self.layer_dest.name))
 
     #Check if all parameters are goods for the auto button
-    def checkAutoButton(self):
+    def checkWorkerAuto(self):
         txt = self.dockwidget.lineEdit_fields_source.text()
         buffer_distance = self.dockwidget.lineEdit_buffer_distance.text()
         precision = self.dockwidget.lineEdit_precision.text()
@@ -381,7 +382,7 @@ class DiagwayProjection(QtCore.QObject):
                 self.dockwidget.push_auto.setEnabled(True)
 
     #Check if all parameters are goods for the fullAuto button
-    def checkFullAutoButton(self):
+    def checkWorkerFullAuto(self):
         buffer_distance = self.dockwidget.lineEdit_buffer_distance.text()
         precision = self.dockwidget.lineEdit_precision.text()
 
@@ -430,7 +431,7 @@ class DiagwayProjection(QtCore.QObject):
         self.dockwidget.lineEdit_fields_dest.setText(fields_dest)       
 
     #Add fields of a layer in comboBox
-    def addFields(self):
+    def addToCSV(self):
         text_source = self.dockwidget.lineEdit_fields_source.text()
         text_dest = self.dockwidget.lineEdit_fields_dest.text()
 
@@ -460,7 +461,7 @@ class DiagwayProjection(QtCore.QObject):
         layer_statement.setVisibility(not visibility)
 
     #Select entity when you put a value in source lineEdit
-    def showField(self):
+    def showCorrespondance(self):
         textEdit_dest = self.dockwidget.lineEdit_fields_dest
         field_source_value = self.sender().text()
         
@@ -632,13 +633,14 @@ class DiagwayProjection(QtCore.QObject):
         HOST = self.dockwidget.lineEdit_host.text()
         USER = self.dockwidget.lineEdit_user.text()
         PASSWORD = self.dockwidget.lineEdit_password.text()
+        PORT = self.dockwidget.lineEdit_port.text()
         regenerate = self.dockwidget.checkBox_regenerate.isChecked()
         add = self.dockwidget.checkBox_add.isChecked()
         items_source = self.dockwidget.listWidget_fields_source.selectedItems()
         items_dest = self.dockwidget.listWidget_fields_dest.selectedItems()
         fields_source = [i.text() for i in items_source]
         fields_dest = [i.text() for i in items_dest]
-        worker = WorkerDistance(DATABASE, HOST, USER, PASSWORD, regenerate, add, self.layer_source, self.layer_dest, self.path_csv, self.field_source, self.field_dest, fields_source, fields_dest)
+        worker = WorkerDistance(DATABASE, HOST, USER, PASSWORD, PORT, regenerate, add, self.layer_source, self.layer_dest, self.path_csv, self.field_source, self.field_dest, fields_source, fields_dest)
 
         # configure the QgsMessageBar
         messageBar = self.iface.messageBar().createMessage('Running...', )
@@ -696,16 +698,16 @@ class DiagwayProjection(QtCore.QObject):
                 self.dockwidget.comboBox_layers_dest_complete.setFilters(QgsMapLayerProxyModel.VectorLayer)
 
                 #Display fields of selected layers
-                self.dockwidget.comboBox_layers_source.layerChanged.connect(lambda : self.fillFields(self.dockwidget.comboBox_fields_source))
-                self.dockwidget.comboBox_layers_dest.layerChanged.connect(lambda : self.fillFields(self.dockwidget.comboBox_fields_dest))
+                self.dockwidget.comboBox_layers_source.layerChanged.connect(lambda : self.fillComboBoxWithFields(self.dockwidget.comboBox_fields_source))
+                self.dockwidget.comboBox_layers_dest.layerChanged.connect(lambda : self.fillComboBoxWithFields(self.dockwidget.comboBox_fields_dest))
 
                 #Check before go to next step
-                self.dockwidget.comboBox_layers_source.layerChanged.connect(self.checkAll)
-                self.dockwidget.comboBox_layers_dest.layerChanged.connect(self.checkAll)
-                self.dockwidget.lineEdit_file.textChanged.connect(self.checkAll)
-                self.dockwidget.comboBox_layers_source_complete.layerChanged.connect(self.checkAll)
-                self.dockwidget.comboBox_layers_dest_complete.layerChanged.connect(self.checkAll)
-                self.dockwidget.lineEdit_file_complete.textChanged.connect(self.checkAll)
+                self.dockwidget.comboBox_layers_source.layerChanged.connect(self.checkCorrespondance)
+                self.dockwidget.comboBox_layers_dest.layerChanged.connect(self.checkCorrespondance)
+                self.dockwidget.lineEdit_file.textChanged.connect(self.checkCorrespondance)
+                self.dockwidget.comboBox_layers_source_complete.layerChanged.connect(self.checkCorrespondance)
+                self.dockwidget.comboBox_layers_dest_complete.layerChanged.connect(self.checkCorrespondance)
+                self.dockwidget.lineEdit_file_complete.textChanged.connect(self.checkCorrespondance)
 
                 #Connect buttons
                 self.dockwidget.push_cancel_create.clicked.connect(lambda : self.dockwidget.stackedWidget.setCurrentIndex(0))
@@ -721,10 +723,10 @@ class DiagwayProjection(QtCore.QObject):
                 self.dockwidget.push_complete.clicked.connect(lambda : self.dockwidget.radio_a.setChecked(True))
                 self.dockwidget.push_file.clicked.connect(self.saveFile)
                 self.dockwidget.push_file_complete.clicked.connect(self.selectFile)
-                self.dockwidget.push_next.clicked.connect(self.setupPage3)
-                self.dockwidget.push_next_complete.clicked.connect(self.setupPage3)
-                self.dockwidget.push_calcul_page3.clicked.connect(self.setupPage4)
-                self.dockwidget.push_add.clicked.connect(self.addFields)
+                self.dockwidget.push_next.clicked.connect(self.setupCorrespondance)
+                self.dockwidget.push_next_complete.clicked.connect(self.setupCorrespondance)
+                self.dockwidget.push_calcul_page3.clicked.connect(self.setupCalculDistance)
+                self.dockwidget.push_add.clicked.connect(self.addToCSV)
                 self.dockwidget.push_auto.clicked.connect(self.startAuto)
                 self.dockwidget.push_fullauto.clicked.connect(self.startFullAuto)
                 self.dockwidget.push_calcul_page4.clicked.connect(self.startDistance)
@@ -733,19 +735,20 @@ class DiagwayProjection(QtCore.QObject):
                 self.dockwidget.push_zoom_source.clicked.connect(self.zoomSource)
 
                 #Connect lineEdit
-                self.dockwidget.lineEdit_file_complete.textChanged.connect(self.filePreview)
-                self.dockwidget.lineEdit_buffer_distance.textChanged.connect(self.checkAutoButton)
-                self.dockwidget.lineEdit_fields_source.textChanged.connect(self.checkAutoButton)
-                self.dockwidget.lineEdit_precision.textChanged.connect(self.checkAutoButton)
-                self.dockwidget.lineEdit_buffer_distance.textChanged.connect(self.checkFullAutoButton)
-                self.dockwidget.lineEdit_precision.textChanged.connect(self.checkFullAutoButton)
+                self.dockwidget.lineEdit_file_complete.textChanged.connect(self.fillPreviewWithFile)
+                self.dockwidget.lineEdit_buffer_distance.textChanged.connect(self.checkWorkerAuto)
+                self.dockwidget.lineEdit_fields_source.textChanged.connect(self.checkWorkerAuto)
+                self.dockwidget.lineEdit_precision.textChanged.connect(self.checkWorkerAuto)
+                self.dockwidget.lineEdit_buffer_distance.textChanged.connect(self.checkWorkerFullAuto)
+                self.dockwidget.lineEdit_precision.textChanged.connect(self.checkWorkerFullAuto)
                 self.dockwidget.lineEdit_fields_source.textChanged.connect(self.checkAddButton)
                 self.dockwidget.lineEdit_fields_dest.textChanged.connect(self.checkAddButton)
-                self.dockwidget.lineEdit_fields_source.editingFinished.connect(self.showField)
+                self.dockwidget.lineEdit_fields_source.editingFinished.connect(self.showCorrespondance)
                 self.dockwidget.lineEdit_database.textChanged.connect(self.checkCalculDistance)
                 self.dockwidget.lineEdit_host.textChanged.connect(self.checkCalculDistance)
                 self.dockwidget.lineEdit_user.textChanged.connect(self.checkCalculDistance)
                 self.dockwidget.lineEdit_password.textChanged.connect(self.checkCalculDistance)
+                self.dockwidget.lineEdit_port.textChanged.connect(self.checkCalculDistance)
 
                 #Connect checkbox
                 self.dockwidget.checkBox_labeling_source.stateChanged.connect(lambda : self.showLabeling(self.layer_source))
