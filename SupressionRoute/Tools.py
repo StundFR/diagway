@@ -1,10 +1,12 @@
 from qgis import processing
-from qgis.core import QgsVectorFileWriter
+from qgis.core import QgsVectorFileWriter, QgsProject
 from os import mkdir
 import shutil
 import tempfile
 
 from .Layer import QgsLayer
+
+DIR_NAME = "SupressionRoute"
 
 #Delete duplicate value in list
 def supprDouble(list):
@@ -228,6 +230,6 @@ def intersect(layer_source, layer_dest, precision, path_output, source_value):
 #Get the path of temporary files
 def getPath():
     path_temp = tempfile.gettempdir()
-    path_dir = path_temp + "/suppressionRouteTmpLayer"
+    path_dir = "{}/{}_{}".format(path_temp, DIR_NAME, getNameFromPath(QgsProject.instance().readPath("./")))
     createDir(path_dir)
     return path_dir

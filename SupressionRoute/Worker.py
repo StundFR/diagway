@@ -4,19 +4,19 @@ from .Tools import *
 import traceback
 import tempfile
 
-DIR_NAME = "/suppressionRouteTmpLayer"
-
 class Worker(QtCore.QObject):
     """Constructor & Variables"""
     finished = QtCore.pyqtSignal(QgsLayer)
     error = QtCore.pyqtSignal(Exception, str)
     progress = QtCore.pyqtSignal(float)
 
-    def __init__(self, items, layer_source, field):
+    def __init__(self, items, layer_source, field, distance, precision):
         QtCore.QObject.__init__(self)
         self.items = items
         self.layer_source = layer_source
         self.field = field
+        self.distance = distance
+        self.precison = precision
         self.killed = False
     #--------------------------------------------------------------------------
 
@@ -44,7 +44,7 @@ class Worker(QtCore.QObject):
     #Create layer with all the road already recorded
     def getRoadsUndone(self, layer_dest, path_output):
         path_temp = tempfile.gettempdir()
-        path_dir = path_temp + DIR_NAME
+        path_dir = getPath()
         createDir(path_dir)
 
         dest_values = []
@@ -69,7 +69,7 @@ class Worker(QtCore.QObject):
                 self.progress.emit(100)
                 break
 
-            dest_values += projection(layer_dest, statement, i, self.field, field_source, 10, 0.9)
+            dest_values += projection(layer_dest, statement, i, self.field, field_source, self.distance, self.precison)
 
             progress_count += 1
             self.progress.emit(progress_count*100/length)
@@ -91,8 +91,7 @@ class Worker(QtCore.QObject):
     """Run"""
     def run(self):
         try:
-            path_temp = tempfile.gettempdir()
-            path_dir = path_temp + DIR_NAME
+            path_dir = getPath()
             removeDir(path_dir)
             createDir(path_dir)
 

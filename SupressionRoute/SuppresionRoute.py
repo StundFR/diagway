@@ -220,15 +220,22 @@ class SuppresionRoute (QtCore.QObject):
 
 
     def checkAll(self):
-        items = self.dockwidget.listWidget_layers.selectedItems()
-        if (len(items) > 0):
-            if (self.dockwidget.comboBox_layers.currentLayer() is None):
-                self.dockwidget.push_ok.setEnabled(False)
-                return
-        
-            self.dockwidget.push_ok.setEnabled(True)
+        check_items = len(self.dockwidget.listWidget_layers.selectedItems())
+        check_layer = not self.dockwidget.comboBox_layers.currentLayer() is None
+
+        try:
+            distance = int(self.dockwidget.lineEdit_distance.text())
+            precision = int(self.dockwidget.lineEdit_precision.text())
+        except ValueError:
+            check_distance = False
+            check_precision = False
         else:
-            self.dockwidget.push_ok.setEnabled(False)
+            check_distance = distance > 0
+            check_precision = precision > 0 and precision <= 100
+
+        check = check_precision and check_distance and check_items and check_layer
+        self.dockwidget.push_ok.setEnabled(check)
+
 
     #Add all layers in the list widget
     def addLayersListWidget(self):
@@ -243,7 +250,9 @@ class SuppresionRoute (QtCore.QObject):
         items = self.dockwidget.listWidget_layers.selectedItems()
         source_layer = QgsLayer(vectorLayer=self.dockwidget.comboBox_layers.currentLayer())
         field = self.dockwidget.comboBox_fields.currentText()
-        worker = Worker(items, source_layer, field)
+        distance = int(self.dockwidget.lineEdit_distance.text())
+        precision = int(self.dockwidget.lineEdit_precision.text())/100
+        worker = Worker(items, source_layer, field, distance, precision)
 
         # configure the QgsMessageBar
         messageBar = self.iface.messageBar().createMessage('Running...', )
@@ -318,6 +327,10 @@ class SuppresionRoute (QtCore.QObject):
                 #Connect list widget
                 self.dockwidget.listWidget_layers.itemSelectionChanged.connect(lambda : self.fillFields(self.dockwidget.comboBox_fields))
                 self.dockwidget.listWidget_layers.itemSelectionChanged.connect(self.checkAll)
+
+                #Connect lineEdit
+                self.dockwidget.lineEdit_precision.textChanged.connect(self.checkAll)
+                self.dockwidget.lineEdit_distance.textChanged.connect(self.checkAll)
 
             # connect to provide cleanup on closing of dockwidget
             self.dockwidget.closingPlugin.connect(self.onClosePlugin)
