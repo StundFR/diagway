@@ -1591,6 +1591,43 @@
             </item>
             <item>
              <widget class="QListWidget" name="listWidget_fields_source">
+              <property name="palette">
+               <palette>
+                <active>
+                 <colorrole role="Highlight">
+                  <brush brushstyle="SolidPattern">
+                   <color alpha="255">
+                    <red>51</red>
+                    <green>153</green>
+                    <blue>255</blue>
+                   </color>
+                  </brush>
+                 </colorrole>
+                </active>
+                <inactive>
+                 <colorrole role="Highlight">
+                  <brush brushstyle="SolidPattern">
+                   <color alpha="255">
+                    <red>51</red>
+                    <green>153</green>
+                    <blue>255</blue>
+                   </color>
+                  </brush>
+                 </colorrole>
+                </inactive>
+                <disabled>
+                 <colorrole role="Highlight">
+                  <brush brushstyle="SolidPattern">
+                   <color alpha="255">
+                    <red>51</red>
+                    <green>153</green>
+                    <blue>255</blue>
+                   </color>
+                  </brush>
+                 </colorrole>
+                </disabled>
+               </palette>
+              </property>
               <property name="font">
                <font>
                 <pointsize>11</pointsize>
@@ -1605,8 +1642,14 @@
               <property name="isWrapping" stdset="0">
                <bool>false</bool>
               </property>
+              <property name="layoutMode">
+               <enum>QListView::SinglePass</enum>
+              </property>
               <property name="wordWrap">
                <bool>true</bool>
+              </property>
+              <property name="selectionRectVisible">
+               <bool>false</bool>
               </property>
              </widget>
             </item>
@@ -1671,6 +1714,43 @@
             </item>
             <item>
              <widget class="QListWidget" name="listWidget_fields_dest">
+              <property name="palette">
+               <palette>
+                <active>
+                 <colorrole role="Highlight">
+                  <brush brushstyle="SolidPattern">
+                   <color alpha="255">
+                    <red>51</red>
+                    <green>153</green>
+                    <blue>255</blue>
+                   </color>
+                  </brush>
+                 </colorrole>
+                </active>
+                <inactive>
+                 <colorrole role="Highlight">
+                  <brush brushstyle="SolidPattern">
+                   <color alpha="255">
+                    <red>51</red>
+                    <green>153</green>
+                    <blue>255</blue>
+                   </color>
+                  </brush>
+                 </colorrole>
+                </inactive>
+                <disabled>
+                 <colorrole role="Highlight">
+                  <brush brushstyle="SolidPattern">
+                   <color alpha="255">
+                    <red>51</red>
+                    <green>153</green>
+                    <blue>255</blue>
+                   </color>
+                  </brush>
+                 </colorrole>
+                </disabled>
+               </palette>
+              </property>
               <property name="font">
                <font>
                 <pointsize>11</pointsize>
