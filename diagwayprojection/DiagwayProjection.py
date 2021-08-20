@@ -516,7 +516,6 @@ class DiagwayProjection(QtCore.QObject):
     
     #Zoom on source value entity
     def zoomSource(self):
-        
         value = self.dockwidget.lineEdit_fields_source.text()
         expression = "{} = {}".format(self.field_source, value)
 
@@ -758,6 +757,8 @@ class DiagwayProjection(QtCore.QObject):
                 self.dockwidget.checkBox_labeling_statement.stateChanged.connect(lambda : self.showLabeling(QgsLayer.findLayerByName(LAYER_STATEMENT_NAME)))
                 self.dockwidget.checkBox_regenerate.stateChanged.connect(lambda : self.dockwidget.listWidget_fields_source.setEnabled(self.dockwidget.checkBox_regenerate.isChecked()))
                 self.dockwidget.checkBox_regenerate.stateChanged.connect(lambda : self.dockwidget.listWidget_fields_dest.setEnabled(self.dockwidget.checkBox_regenerate.isChecked()))
+                self.dockwidget.checkBox_regenerate.stateChanged.connect(self.checkCalculDistance)
+                self.dockwidget.checkBox_add.stateChanged.connect(self.checkCalculDistance)
 
                 #ListWidget
                 self.dockwidget.listWidget_fields_source.itemSelectionChanged.connect(self.checkCalculDistance)

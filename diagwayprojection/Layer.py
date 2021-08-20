@@ -22,8 +22,7 @@ class QgsLayer:
             self.path = self.vector.dataProvider().dataSourceUri().split("|")[0]
             self.crs = self.vector.crs().authid()
             self.id = self.vector.id()
-
-
+        
     """Method"""
     #set name of layer
     def setName(self, name):
@@ -264,7 +263,7 @@ class QgsLayer:
             self.vector.dataProvider().renameAttributes({findex: newname})
             self.vector.updateFields()
 
-
+    #Check is layer have this attribut
     def isFieldExist(self, field):
         findex = self.vector.dataProvider().fieldNameIndex(field)
         if findex == -1:
@@ -272,7 +271,7 @@ class QgsLayer:
         else:
             return True
 
-
+    #Export layer to BDD postgis in LineString
     def exportToPostgisLineString(self, dbname, host, schema, table, geom):
         parameters = {"INPUT" : self.vector, "TYPE" : 2, "OUTPUT": "postgres://dbname='{}' host={} port=5432 sslmode=disable table=\"{}\".\"{}\" ({})".format(dbname, host, schema, table, geom)}
         processing.run("qgis:convertgeometrytype", parameters)
