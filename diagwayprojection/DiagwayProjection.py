@@ -25,7 +25,7 @@ from os import error
 from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, Qt
 from qgis.PyQt.QtGui import QIcon, QColor
 from qgis.PyQt.QtWidgets import QAction, QFileDialog, QProgressBar, QPushButton
-from qgis.core import QgsMapLayerProxyModel, QgsMessageLog, Qgis
+from qgis.core import QgsMapLayerProxyModel, QgsMessageLog, Qgis, QgsCoordinateReferenceSystem
 
 # Initialize Qt resources from file resources.py
 from .resources import *
@@ -309,6 +309,8 @@ class DiagwayProjection(QtCore.QObject):
         self.layer_source.filter("")
         self.layer_dest.filter("")
         self.dockwidget.checkBox_symbolized_page3.setEnabled(False)
+
+        QgsProject.instance().setCrs(QgsCoordinateReferenceSystem(2154))
 
         if (self.dockwidget.radio_w.isChecked()):
             line = "{};{}\n".format(self.field_source, self.field_dest)
